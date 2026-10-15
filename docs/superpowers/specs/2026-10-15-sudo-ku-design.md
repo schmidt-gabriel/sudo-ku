@@ -1,194 +1,202 @@
-# sudo-ku: design da v1
+# sudo-ku: v1 design
 
-Data: 2026-10-15
+Date: 2026-10-15
 Repo: https://github.com/schmidt-gabriel/sudo-ku
 
-## Objetivo
+## Goal
 
-Um sudoku de terminal (TUI) para jogar de verdade e publicar como projeto open
-source bem acabado.
+A terminal sudoku (TUI) that is pleasant to actually play and polished enough
+to publish as an open source project.
 
-Critérios de sucesso:
+Success criteria:
 
-- Instalar com um comando (`brew` ou `go install`), abrir e jogar sem ler documentação.
-- Jogável inteiramente com mouse **ou** inteiramente com teclado (setas).
-- Tutorial interativo no primeiro uso.
-- Código simples: poucas camadas, arquivos pequenos de propósito único, sem abstrações especulativas.
-- Motor reutilizável por outra UI no futuro (GUI, web via WASM) sem alterações.
+- Install with one command (`brew` or `go install`), open it and play without reading docs.
+- Fully playable with the mouse **or** fully with the keyboard (arrow keys).
+- Interactive tutorial on first run.
+- Simple code: few layers, small single-purpose files, no speculative abstractions.
+- The engine can be reused by another UI later (desktop GUI, web via WASM) without changes.
 
-Fora do escopo da v1: dica, verificação contra a solução, estatísticas,
-seed/puzzle diário, temas, dificuldade por técnicas de resolução.
+Out of scope for v1: hints, checking against the solution, statistics,
+seeds/daily puzzle, themes, difficulty rated by solving techniques.
 
 ## Stack
 
-- Go (1.27)
-- Bubble Tea (loop da TUI), Lip Gloss (estilo), bubblezone (hit-testing do mouse)
-- GoReleaser + GitHub Actions (release), vhs (GIF do README)
+- Go 1.27
+- Bubble Tea v2 (`charm.land/bubbletea/v2`), Lip Gloss v2 (`charm.land/lipgloss/v2`), bubblezone v2 (`github.com/lrstanley/bubblezone/v2`) for mouse hit-testing
+- GoReleaser v2 + GitHub Actions for releases, vhs for the README GIF
 
-## Idioma
+## Language
 
-Código, README e textos da interface em **inglês** (público open source).
-Todos os textos da UI ficam em um único arquivo (`internal/ui/text.go`), o que
-deixa uma tradução futura trivial. Este documento é em português.
+Code, UI text, README, docs, commits and PR descriptions are in **English**.
+All UI strings live in one file (`internal/ui/text.go`) so a future
+translation is easy.
 
-## Estrutura
+## Layout
 
 ```
-cmd/sudo-ku/main.go      flags (--version), inicia o programa
-internal/sudoku/         Grid, regras, solver, gerador. Sem dependência de UI.
-internal/game/           estado da partida. Sem dependência de UI nem de disco.
-internal/store/          caminhos, save.json, settings.json, gravação atômica
-internal/ui/             tea.Model único com modos; view, teclas, mouse, tutorial
+cmd/sudo-ku/main.go      flags (--version), starts the program
+internal/sudoku/         Grid, rules, solver, generator. No UI dependencies.
+internal/game/           one game's state. No UI or disk dependencies.
+internal/store/          paths, save.json, settings.json, atomic writes
+internal/ui/             one tea.Model with modes; rendering, input, mouse, tutorial
 ```
 
-Regra de dependência: `ui -> game -> sudoku` e `ui -> store -> game`.
-`sudoku` e `game` nunca importam Bubble Tea, Lip Gloss, `os` para arquivos ou o
-pacote `store`. Uma UI nova (no mesmo módulo) reutiliza `sudoku` e `game` e
-escolhe sua própria persistência. Se uma UI em outro repo precisar do motor,
-`internal/sudoku` e `internal/game` são movidos para a raiz do módulo.
+Dependency rule: `ui -> game -> sudoku` and `ui -> store -> game`.
+`sudoku` and `game` never import Bubble Tea, Lip Gloss, file I/O or `store`.
+A new UI in the same module reuses `sudoku` and `game` and picks its own
+persistence. If a UI in another repo needs the engine, `internal/sudoku` and
+`internal/game` move to the module root.
 
-## `internal/sudoku`: motor
+## `internal/sudoku`: engine
 
-- `type Grid [81]uint8`, 0 = vazio. Índice `i = linha*9 + coluna`.
-- `Peers(i int) []int`: as 20 células da mesma linha, coluna e caixa (tabela pré-calculada).
-- `Conflicts(g Grid) []int`: índices de células preenchidas com valor repetido em algum peer.
-- `IsComplete(g Grid) bool`: sem zeros e sem conflitos.
-- `Solve(g Grid) (Grid, bool)` e `CountSolutions(g Grid, limit int) int`:
-  backtracking com bitmasks de candidatos por linha/coluna/caixa, escolhendo a
-  célula com menos candidatos. `CountSolutions` para ao atingir `limit`.
-- `type Difficulty int` com `Easy`, `Medium`, `Hard`, `Expert`.
+- `type Grid [81]uint8`, 0 = empty. Cell `i = row*9 + col`.
+- `Row(i)`, `Col(i)`, `Box(i)`.
+- `Peers(i int) []int`: the 20 cells sharing a row, column or box (precomputed).
+- `Conflicts(g Grid) []int`: filled cells whose value repeats in a peer, ascending.
+- `IsComplete(g Grid) bool`: no empty cells and no conflicts.
+- `Parse(s string) (Grid, error)`, `MustParse`, `Grid.String()`: 81 characters, `0` or `.` for empty.
+- `Solve(g Grid) (Grid, bool)` and `CountSolutions(g Grid, limit int) int`:
+  backtracking with per row/column/box candidate bitmasks, always branching on
+  the cell with the fewest candidates. `CountSolutions` stops at `limit`.
+- `type Difficulty int`: `Easy`, `Medium`, `Hard`, `Expert`, with `String()` and `Valid()`.
 - `Generate(d Difficulty, rng *rand.Rand) (puzzle, solution Grid)`:
-  1. Grade completa aleatória (solver com ordem de candidatos embaralhada).
-  2. Remove células em ordem aleatória; se `CountSolutions(g, 2) != 1`, devolve a célula.
-  3. Para ao atingir a meta de pistas ou quando nenhuma remoção é possível.
+  1. Fill a random complete grid (solver with shuffled digit order).
+  2. Empty cells in random order; if `CountSolutions(g, 2) != 1`, put the cell back.
+  3. Stop at the clue target or when no cell can be removed.
+  4. If a pass ends above the target, retry (up to 10 passes) and keep the best.
 
-Metas de pistas: Easy 40, Medium 32, Hard 27, Expert = o mínimo que o passo 2
-alcançar (tipicamente 22 a 24). A dificuldade é aproximada por número de pistas;
-a assinatura de `Generate` permite trocar por classificação por técnicas sem
-mudar quem a chama.
+Clue targets: Easy 40, Medium 32, Hard 27. Expert has no target: it removes
+as many clues as possible and retries until it has fewer than 27. Difficulty is
+approximated by clue count; `Generate`'s signature allows switching to
+technique-based rating later without changing callers.
 
-## `internal/game`: estado da partida
+## `internal/game`: game state
 
 ```go
 type Game struct {
-    Givens     sudoku.Grid   // pistas, imutáveis
-    Values     sudoku.Grid   // pistas + jogadas
-    Notes      [81]uint16    // bits 1..9 = candidatos anotados
+    Givens     sudoku.Grid   // read-only clues
+    Values     sudoku.Grid   // clues + player moves
+    Notes      [81]uint16    // bit v set = digit v pencilled in
     Solution   sudoku.Grid
     Difficulty sudoku.Difficulty
     Elapsed    time.Duration
-    // histórico de undo/redo (não exportado, não serializado)
+    // unexported undo/redo history, not serialized
 }
 ```
 
-Operações (todas são no-op se a célula for pista):
+Operations (no-ops on givens):
 
-- `Set(i, v)`: define o valor, zera as notas da célula e remove o bit `v` das notas dos 20 peers.
-- `Clear(i)`: apaga o valor.
-- `ToggleNote(i, v)`: só atua em célula vazia.
-- `Undo()` / `Redo()`: snapshots de `{Values, Notes}` antes de cada ação que muda estado; limite de 200. Uma nova ação limpa a pilha de redo.
-- `Conflicts() []int`, `Won() bool` (= `sudoku.IsComplete(Values)`).
-- `Tick(d time.Duration)`: soma em `Elapsed`. Quem chama decide quando o tempo corre.
-- `New(d, rng)`, `MarshalJSON` / `UnmarshalJSON`. O JSON não inclui o histórico. `UnmarshalJSON` valida (tamanhos, valores 0..9, pistas presentes em `Values`) e retorna erro se inválido.
+- `Set(i, v)`: places v, clears the cell's notes and removes v from the notes of its 20 peers.
+- `Clear(i)`: empties the cell (value and notes).
+- `ToggleNote(i, v)`: only on empty cells.
+- `Undo()` / `Redo()`: snapshots of `{Values, Notes}` taken before every change; at most 200. A new change clears redo.
+- `Conflicts()`, `Won()` (= `sudoku.IsComplete(Values)`), `IsGiven(i)`, `HasNote(i, v)`.
+- `Tick(d)`: adds to `Elapsed`. The caller decides when time runs.
+- `New(d, rng)`, `FromPuzzle(puzzle, solution, d)`.
+- `MarshalJSON` / `UnmarshalJSON`. JSON excludes history. `UnmarshalJSON` rejects data that could not come from a real game (bad grids, givens overwritten, unsolved solution, invalid notes, unknown difficulty, negative time).
 
-## `internal/store`: persistência
+## `internal/store`: persistence
 
-- Diretório: `$XDG_CONFIG_HOME/sudo-ku/`, ou `~/.config/sudo-ku/` se a variável não estiver definida. O mesmo em macOS, Linux e Windows.
-- `save.json`: partida em andamento. Gravado após cada jogada e ao sair; apagado na vitória.
+- Directory: `$XDG_CONFIG_HOME/sudo-ku/`, or `~/.config/sudo-ku/` when unset. Same on macOS, Linux and Windows.
+- `save.json`: game in progress. Written after every move, when leaving to the menu and on quit; deleted on a win.
 - `settings.json`: `{"tutorialDone": bool}`.
-- Gravação atômica: escreve `<arquivo>.tmp` e faz `os.Rename`.
-- API: `LoadGame() (*game.Game, error)`, `SaveGame(*game.Game) error`, `DeleteGame() error`, `LoadSettings() (Settings, error)`, `SaveSettings(Settings) error`. Arquivo ausente não é erro (retorna `nil` / valores zero).
+- Atomic writes: write `<file>.tmp`, then `os.Rename`.
+- API on `*Store`: `LoadGame() (*game.Game, error)`, `SaveGame`, `DeleteGame`, `LoadSettings() (Settings, error)`, `SaveSettings`. A missing file is not an error (nil game / zero settings).
 
 ## `internal/ui`: interface
 
-Um único `tea.Model` com campo `mode`: `menu`, `difficulty`, `playing`,
-`tutorial`, `won`. A ajuda (`?`) é um overlay booleano sobre qualquer modo.
+One `tea.Model` with a `mode`: `menu`, `difficulty`, `playing`, `tutorial`,
+`won`. Help (`?`) is a flag that replaces the screen until any key or click.
 
-Arquivos: `model.go` (estado e `Update`), `view.go` (render), `keys.go`
-(keymap, usado também pela barra de ajuda), `mouse.go` (IDs de zona e cliques),
-`tutorial.go`, `styles.go`, `text.go`.
+Files: `model.go` (state, `Update`, key handling), `view.go` (screens),
+`board.go` (board drawing and click-to-cell math), `mouse.go` (zones and
+clicks), `styles.go`, `text.go`, `tutorial.go`.
 
-### Telas
+### Screens
 
-- **Menu:** Continue (só se houver save), New game, Tutorial, Quit.
+- **Menu:** Continue (only with a save), New game, Tutorial, Quit.
 - **Difficulty:** Easy, Medium, Hard, Expert.
-- **Playing:** tabuleiro, painel lateral (dificuldade, timer, modo valor/notas), teclado numérico clicável, barra de atalhos no rodapé.
-- **Won:** tempo e dificuldade; New game, Menu.
+- **Playing:** header line (difficulty, timer, value/notes mode), board, clickable number pad, shortcut line, status line.
+- **Won:** difficulty and time; New game, Menu.
 
-Menus navegáveis com setas + Enter e com clique.
+Lists work with arrows + enter and with clicks.
 
-### Tabuleiro
+### Board
 
-- Célula de 5x3 caracteres; a mini-grade 3x3 de notas cabe nela. Bordas grossas entre caixas 3x3.
-- Tamanho mínimo do terminal: 60x36. Abaixo disso, mostra apenas uma mensagem pedindo para aumentar a janela.
-- Teclado numérico: `[1]`..`[9]`, `[Erase]`, `[Notes]`, `[Undo]`.
+- Cells are 5x3 characters so a 3x3 grid of notes fits. Thin `│` between cells, thick borders around boxes. The board is 55x31.
+- Minimum terminal: 60x36. Below that, only a message asking for a bigger window is shown.
+- Number pad: `[1]`..`[9]`, `[Erase]`, `[Notes]`, `[Undo]`.
 
-### Controles
+### Controls
 
-| Ação | Teclado | Mouse |
+| Action | Keyboard | Mouse |
 |---|---|---|
-| Mover / selecionar | setas, `hjkl` | clicar na célula |
-| Número (ou nota, no modo notas) | `1`-`9` | botão `[n]` |
-| Apagar | `0`, Backspace, `x` | `[Erase]` |
-| Alternar modo notas | `n` | `[Notes]` |
-| Desfazer / refazer | `u` / `ctrl+r` | `[Undo]` |
-| Ajuda / menu / sair | `?` / `esc` / `q` | (só teclado) |
+| Move / select | arrows, `hjkl` | click a cell |
+| Digit (or note in notes mode) | `1`-`9` | `[n]` button |
+| Erase | `0`, `x`, Backspace, Delete | `[Erase]` |
+| Toggle notes mode | `n` | `[Notes]` |
+| Undo / redo | `u`, `ctrl+z` / `ctrl+r` | `[Undo]` |
+| Help / menu / quit | `?` / `esc` / `q` | (keyboard only) |
 
-`q` e `esc` salvam a partida antes de sair ou voltar ao menu.
+`esc` and `q` save the game first.
 
-### Visual
+### Look
 
-Cores `lipgloss.AdaptiveColor` (terminal claro e escuro):
+Colors come from `lipgloss.LightDark`, driven by `tea.BackgroundColorMsg`
+(dark is assumed until the terminal answers):
 
-- Pistas: negrito neutro. Valores do jogador: azul. Conflitos: vermelho.
-- Linha, coluna e caixa da seleção: fundo suave. Célula selecionada: fundo forte.
-- Células com o mesmo valor da seleção: destacadas.
-- Notas: cinza.
+- Givens: bold neutral. Player digits: blue. Conflicts: bold red.
+- Selected cell: strong background. Its row, column and box: soft background.
+- Cells with the same digit as the selection: highlighted.
+- Notes: grey.
 
 ### Timer
 
-`tea.Tick` de 1s chama `game.Tick` apenas no modo `playing` sem overlay de ajuda.
+A 1s `tea.Tick` calls `game.Tick` only in `playing` mode while help is closed.
 
 ### Mouse
 
-`tea.WithMouseCellMotion()` + bubblezone. Cada célula tem zona `cell-<i>`, cada
-botão `btn-<nome>`, cada item de menu `menu-<n>`. O `Update` consulta qual zona
-contém o clique.
+`View().MouseMode = tea.MouseModeCellMotion` plus bubblezone. The whole board is
+one zone; the click position inside it maps to a cell with plain arithmetic
+(`cellAt`). Buttons and list items are zones (`num-<n>`, `btn-<name>`,
+`menu-<n>`, `diff-<n>`, `won-<name>`). Only zones of the current mode are
+checked, so stale zones from a previous screen never fire.
 
 ## Tutorial
 
-- Inicia automaticamente quando `settings.tutorialDone` é false. `esc` pula a qualquer momento. Ao concluir ou pular, `tutorialDone = true`. Disponível no menu.
-- Usa um puzzle fixo quase resolvido (cerca de 6 células vazias), embutido no código. Não grava `save.json`.
-- Passos são dados: `[]step{text string; done func(*Model) bool}`. O balão mostra o texto do passo atual; o passo avança quando `done` retorna true.
-- Passos:
-  1. Regras do sudoku (Enter continua).
-  2. Mover até a célula destacada (setas ou clique).
-  3. Digitar o único número possível nela (o texto explica o porquê).
-  4. Ativar notas com `n` e anotar dois candidatos em outra célula.
-  5. Colocar um número repetido, ver o conflito em vermelho, desfazer com `u`.
-  6. Completar o puzzle; `?` mostra a ajuda a qualquer hora.
+- Starts automatically when `tutorialDone` is false. `esc` skips at any time. Finishing or skipping sets `tutorialDone = true`. Available from the menu. `q` quits without marking it done.
+- Uses a fixed puzzle built into the code: a known solution with 6 blanks in 6 different rows, so each blank has exactly one possible digit. It never writes `save.json` and the timer does not run.
+- Steps are data: `[]tutorialStep{text string; done func(*Model) bool}`. A nil `done` waits for enter. After every key or click the tutorial skips past steps whose `done` is true.
+- The header shows "Tutorial · esc skips"; the step text replaces the shortcut line (at most 2 lines). The target cell is highlighted yellow during the first steps.
+- Steps:
+  1. Sudoku rules (enter continues).
+  2. Move to the highlighted cell (arrows or click).
+  3. Type the only digit that fits (the text explains why).
+  4. Turn on notes with `n` and add two notes to another empty cell.
+  5. Leave notes mode, place a repeated digit, see the red conflict, undo with `u`.
+  6. Fill the rest; `?` shows help anytime.
 
-## Tratamento de erros
+## Error handling
 
-- `save.json` ausente: menu sem "Continue".
-- `save.json` corrompido ou inválido: ignorado; menu sem "Continue"; aviso no rodapé ("Couldn't load saved game"). Nunca causa panic.
-- `settings.json` corrompido: tratado como valores zero (tutorial roda de novo).
-- Falha ao gravar: aviso no rodapé; o jogo continua.
-- Terminal pequeno: mensagem de tamanho mínimo, sem quebrar o layout.
+- `save.json` missing: menu without Continue.
+- `save.json` corrupt or invalid: ignored; menu without Continue; status line says "Couldn't load saved game". Never panics.
+- `settings.json` corrupt: treated as defaults (tutorial runs again).
+- Write failure: status line says "Couldn't save game"; play continues.
+- Terminal too small: size message instead of a broken layout.
 
-## Testes
+## Testing
 
-- `sudoku`: `Solve` em puzzles conhecidos (incluindo um de 17 pistas); `CountSolutions` com puzzle de múltiplas soluções; `Generate` com seed fixa produz solução única e respeita a meta de pistas por dificuldade; `Conflicts` e `Peers`.
-- `game`: edição de pista é no-op; auto-remoção de notas nos peers; `ToggleNote` em célula preenchida é no-op; undo/redo, incluindo desfazer um `Set` que removeu notas; nova ação limpa redo; ida e volta JSON; JSON inválido retorna erro.
-- `store`: ida e volta de save e settings usando `XDG_CONFIG_HOME` em diretório temporário; arquivo ausente; arquivo corrompido.
-- `ui`: `Update` com mensagens de tecla e de mouse sintéticas, verificando seleção, modo notas, transições de modo e avanço do tutorial. Sem snapshot de `View()`.
+- `sudoku`: `Solve` on known puzzles (including a 17-clue one); `CountSolutions` on an empty grid and dead ends; `Generate` with fixed seeds gives a unique solution and hits each clue target; `Conflicts`, `Peers`, `Parse`.
+- `game`: givens read-only; peer note removal; `ToggleNote` on filled cells is a no-op; undo/redo including undoing a `Set` that removed notes; new change clears redo; history bound; JSON round trip; invalid JSON is rejected.
+- `store`: save/settings round trips in a temp dir; `XDG_CONFIG_HOME` and `HOME` fallback; missing and corrupt files; no `.tmp` left behind.
+- `ui`: `Update` with synthetic key messages and `handleClick` with zone IDs, checking selection, notes mode, mode transitions, saving, status messages and the full tutorial walkthrough; `cellAt` math; a render smoke test per screen. No `View()` snapshots.
 
-## Distribuição
+## Distribution
 
-- **CI** (push e PR): `go vet ./...` e `go test -race ./...`.
-- **Release** em tag `v*`: GoReleaser gera binários para darwin, linux e windows (amd64 e arm64), cria a GitHub Release e publica um cask em `schmidt-gabriel/homebrew-tap` (`Casks/sudo-ku.rb`). Requer o secret `HOMEBREW_TAP_TOKEN` (token com escrita no repo do tap).
-- Instalação:
+- **CI** (push to main and PRs): `go vet ./...` and `go test -race ./...`.
+- **Release** on `v*` tags: GoReleaser builds darwin, linux and windows (amd64 and arm64), creates the GitHub Release and publishes a cask to `schmidt-gabriel/homebrew-tap` (`Casks/sudo-ku.rb`). Needs the `HOMEBREW_TAP_TOKEN` secret (a token with write access to the tap repo).
+- Install:
   - `brew install schmidt-gabriel/tap/sudo-ku`
   - `go install github.com/schmidt-gabriel/sudo-ku/cmd/sudo-ku@latest`
-- `--version` imprime a versão injetada via ldflags.
-- README: GIF de demonstração (script `demo.tape` do vhs versionado), instalação, controles, licença MIT.
+- `--version` prints the version injected with ldflags.
+- README: demo GIF (from a versioned vhs `demo.tape`), install, controls, MIT license.
