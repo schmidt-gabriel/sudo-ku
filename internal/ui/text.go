@@ -26,7 +26,7 @@ const (
 
 	textTutorialSkip     = " · esc skips"
 	textTutorialDone     = "Tutorial complete. Pick New game to play!"
-	textTutorialRules    = "Fill every row, column and 3×3 box with 1-9, each digit once. Press enter to start."
+	textTutorialRules    = "Fill every row, column and 3×3 box with 1-9, each digit once. Press enter or click to start."
 	textTutorialMove     = "Move to the yellow cell with the arrow keys (or hjkl), or just click it."
 	textTutorialPlace    = "Its row already has 1-4 and 6-9, so only 5 fits. Type 5 or click [5] below."
 	textTutorialNotes    = "Not sure about a cell? Press n (or click [Notes]) and add two notes to another empty cell."

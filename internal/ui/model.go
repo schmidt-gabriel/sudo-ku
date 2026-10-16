@@ -90,7 +90,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.BackgroundColorMsg:
 		m.dark = msg.IsDark()
 	case tickMsg:
-		if m.mode == modePlaying && !m.showHelp {
+		if m.mode == modePlaying && !m.showHelp && !m.tooSmall() {
 			m.game.Tick(time.Second)
 		}
 		return m, tick()
@@ -98,9 +98,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKey(msg.String())
 	case tea.MouseClickMsg:
 		if msg.Button == tea.MouseLeft {
-			if id := m.hit(msg); id != "" {
-				return m.handleClick(id)
-			}
+			return m.handleClick(m.hit(msg))
 		}
 	}
 	return m, nil
@@ -110,6 +108,9 @@ func (m Model) handleKey(key string) (Model, tea.Cmd) {
 	m.status = ""
 	if key == "ctrl+c" {
 		return m, m.quit()
+	}
+	if m.tooSmall() && key != "q" {
+		return m, nil // the board is hidden, so only quitting is allowed
 	}
 	if m.showHelp {
 		m.showHelp = false

@@ -61,9 +61,12 @@ func firstHit(msg tea.MouseClickMsg, ids []string) string {
 	return ""
 }
 
-// handleClick runs the action for a zone ID. Clicks do exactly what the
-// matching keys do.
+// handleClick runs the action for a zone ID, or "" for a click outside every
+// zone. Clicks do exactly what the matching keys do.
 func (m Model) handleClick(id string) (Model, tea.Cmd) {
+	if m.tooSmall() {
+		return m, nil
+	}
 	m.status = ""
 	if m.showHelp {
 		m.showHelp = false
@@ -98,6 +101,9 @@ func (m Model) handleClick(id string) (Model, tea.Cmd) {
 		} else {
 			m.toMenu()
 		}
+	}
+	if m.mode == modeTutorial && tutorialSteps[m.tutorialStep].done == nil {
+		m.tutorialStep++ // a click works like enter on "press enter" steps
 	}
 	m.advanceTutorial()
 	return m, nil

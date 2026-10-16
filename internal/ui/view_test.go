@@ -168,3 +168,32 @@ func TestNotesRenderInCell(t *testing.T) {
 		t.Errorf("value line = %q, want %q", got, "  5  ")
 	}
 }
+
+func TestTooSmallFreezesTheGame(t *testing.T) {
+	m := playing(tutorialSeen())
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = next.(Model)
+	m = press(m, "4", "x", "u")
+	m, _ = m.handleClick("num-7")
+	next, _ = m.Update(tickMsg{})
+	m = next.(Model)
+	if m.game.Values[2] != 0 || m.game.Elapsed != 0 {
+		t.Errorf("hidden board changed: cell 2 = %d, elapsed %v", m.game.Values[2], m.game.Elapsed)
+	}
+	_, cmd := m.Update(key("q"))
+	if cmd == nil {
+		t.Fatal("q did nothing while the window was too small")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Error("q should still quit while the window is too small")
+	}
+}
+
+func TestClickAnywhereClosesHelp(t *testing.T) {
+	m := playing(tutorialSeen())
+	m.showHelp = true
+	next, _ := m.Update(tea.MouseClickMsg{X: 0, Y: 0, Button: tea.MouseLeft})
+	if next.(Model).showHelp {
+		t.Error("a click outside any zone did not close help")
+	}
+}

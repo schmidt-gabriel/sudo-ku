@@ -120,3 +120,11 @@ func TestTutorialTextFitsTwoLines(t *testing.T) {
 		}
 	}
 }
+
+func TestTutorialClickStarts(t *testing.T) {
+	m := newModel(&fakeStore{})
+	next, _ := m.Update(tea.MouseClickMsg{X: 0, Y: 0, Button: tea.MouseLeft})
+	if got := next.(Model).tutorialStep; got != 1 {
+		t.Errorf("after a click the tutorial is at step %d, want 1", got)
+	}
+}

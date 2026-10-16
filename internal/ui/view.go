@@ -25,8 +25,14 @@ func (m Model) View() tea.View {
 	return v
 }
 
+// tooSmall reports whether the window is too small to draw the game.
+// Width 0 means no size has arrived yet.
+func (m Model) tooSmall() bool {
+	return m.width > 0 && (m.width < minWidth || m.height < minHeight)
+}
+
 func (m Model) render() string {
-	if m.width > 0 && (m.width < minWidth || m.height < minHeight) {
+	if m.tooSmall() {
 		return fmt.Sprintf(textTooSmall, minWidth, minHeight, m.width, m.height)
 	}
 	st := newStyles(m.dark)
