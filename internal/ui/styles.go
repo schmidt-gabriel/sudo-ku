@@ -18,10 +18,10 @@ func newStyles(dark bool) styles {
 	ld := lipgloss.LightDark(dark)
 	c := lipgloss.Color
 	s := styles{
-		text:       ld(c("#1f2328"), c("#e6edf3")),
-		muted:      ld(c("#8c959f"), c("#6e7681")),
-		accent:     ld(c("#0969da"), c("#58a6ff")),
-		conflict:   ld(c("#cf222e"), c("#ff7b72")),
+		text:     ld(c("#1f2328"), c("#e6edf3")),
+		muted:    ld(c("#8c959f"), c("#6e7681")),
+		accent:   ld(c("#0969da"), c("#58a6ff")),
+		conflict: ld(c("#cf222e"), c("#ff7b72")),
 		// Backgrounds and the same-digit color are xterm-256 palette entries,
 		// so they look the same in 256-color and true-color terminals.
 		same:       ld(c("136"), c("179")),
