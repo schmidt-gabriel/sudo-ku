@@ -23,6 +23,7 @@ var (
 // fakeStore keeps everything in memory.
 type fakeStore struct {
 	saved    *game.Game
+	history  []store.Result
 	settings store.Settings
 	loadErr  error
 	saveErr  error
@@ -38,7 +39,12 @@ func (f *fakeStore) SaveGame(g *game.Game) error {
 	f.saved = g
 	return nil
 }
-func (f *fakeStore) DeleteGame() error                     { f.saved = nil; return nil }
+func (f *fakeStore) DeleteGame() error                    { f.saved = nil; return nil }
+func (f *fakeStore) LoadHistory() ([]store.Result, error) { return f.history, nil }
+func (f *fakeStore) AddResult(r store.Result) error {
+	f.history = append([]store.Result{r}, f.history...)
+	return nil
+}
 func (f *fakeStore) LoadSettings() (store.Settings, error) { return f.settings, nil }
 func (f *fakeStore) SaveSettings(s store.Settings) error   { f.settings = s; return nil }
 
@@ -251,20 +257,6 @@ func TestEscSavesAndContinues(t *testing.T) {
 	}
 	if m = press(m, "enter"); m.mode != modePlaying || m.game.Values[2] != 4 {
 		t.Error("Continue did not restore the game")
-	}
-}
-
-func TestQuitSaves(t *testing.T) {
-	fs := tutorialSeen()
-	_, cmd := playing(fs).Update(key("q"))
-	if cmd == nil {
-		t.Fatal("q returned no command")
-	}
-	if _, ok := cmd().(tea.QuitMsg); !ok {
-		t.Error("q did not quit")
-	}
-	if fs.saves != 1 {
-		t.Errorf("saves = %d, want 1", fs.saves)
 	}
 }
 

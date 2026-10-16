@@ -39,12 +39,16 @@ The terminal needs to be at least 91 columns by 32 rows.
 | Erase | `0`, `x`, Backspace |
 | Notes mode | `n` |
 | Undo / redo | `u` / `ctrl+r` |
+| Save now | `s`, or click `[Save]` |
 | Help | `?` |
-| Menu / quit | `esc` / `q` |
+| Menu | `esc` (saves) |
+| Quit | `q`, or click `[Quit]`: save and quit, or discard and quit |
 
 Placing a digit removes it from the notes in the same row, column and box.
-Repeated digits turn red. Your game is saved after every move in
-`~/.config/sudo-ku` (or `$XDG_CONFIG_HOME/sudo-ku`).
+Blue digits are yours and can be changed; the others are clues. Repeated
+digits turn red. Your game is saved after every move in `~/.config/sudo-ku`
+(or `$XDG_CONFIG_HOME/sudo-ku`), and the menu lists your last finished
+games with their difficulty and time.
 
 ## Develop
 

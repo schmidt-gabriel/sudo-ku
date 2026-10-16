@@ -6,13 +6,13 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	zone "github.com/lrstanley/bubblezone/v2"
 
 	"github.com/schmidt-gabriel/sudo-ku/internal/sudoku"
 )
 
-// The game screen is a header, the board, the number pad, a shortcut line
-// and a status line.
+// The game screen is a header, the board, a shortcut line and a status line.
 const (
 	minWidth  = boardW
 	minHeight = boardH + 4
@@ -39,13 +39,17 @@ func (m Model) render() string {
 	if m.showHelp {
 		return st.title.Render(m.t.Help[0]) + "\n" + strings.Join(m.t.Help[1:], "\n")
 	}
+	if m.confirmQuit {
+		opts := []string{m.t.SaveAndQuit, m.t.DiscardAndQuit, m.t.Cancel}
+		return m.renderList(st, m.t.QuitTitle, opts, "quit", m.quitIndex, nil, m.t.QuitHelp)
+	}
 	switch m.mode {
 	case modeDifficulty:
 		var opts []string
 		for _, d := range sudoku.Difficulties {
 			opts = append(opts, m.t.Difficulties[d])
 		}
-		return m.renderList(st, m.t.ChooseDifficulty, opts, "diff")
+		return m.renderList(st, m.t.ChooseDifficulty, opts, "diff", m.menuIndex, nil, m.t.MenuHelp)
 	case modePlaying, modeTutorial:
 		return m.renderGame(st)
 	case modeWon:
@@ -66,21 +70,42 @@ func (m Model) renderMenu(st styles) string {
 	for _, item := range m.menuItems() {
 		opts = append(opts, labels[item])
 	}
-	return m.renderList(st, m.t.Title, opts, "menu")
+	return m.renderList(st, m.t.Title, opts, "menu", m.menuIndex, m.recentGames(st), m.t.MenuHelp)
+}
+
+// recentGamesShown is how many finished games the menu lists.
+const recentGamesShown = 5
+
+// recentGames lists the latest finished games: date, difficulty and time.
+func (m Model) recentGames(st styles) []string {
+	if len(m.history) == 0 {
+		return nil
+	}
+	lines := []string{"", st.title.Render(m.t.RecentGames)}
+	for _, r := range m.history[:min(len(m.history), recentGamesShown)] {
+		name := r.Difficulty.String()
+		if r.Difficulty.Valid() {
+			name = m.t.Difficulties[r.Difficulty]
+		}
+		lines = append(lines, st.help.Render(fmt.Sprintf("  %s  %-8s %s",
+			r.FinishedAt.Local().Format(m.t.DateFormat), name, formatDuration(r.Elapsed))))
+	}
+	return lines
 }
 
 // renderList draws a title over clickable options with zone IDs
-// "<prefix>-0", "<prefix>-1", and so on.
-func (m Model) renderList(st styles, title string, opts []string, prefix string) string {
+// "<prefix>-0", "<prefix>-1", and so on, then any extra lines and a help line.
+func (m Model) renderList(st styles, title string, opts []string, prefix string, selected int, extra []string, help string) string {
 	lines := []string{st.title.Render(title), ""}
 	for n, opt := range opts {
 		line := st.item.Render("  " + opt)
-		if n == m.menuIndex {
+		if n == selected {
 			line = st.itemOn.Render("> " + opt)
 		}
 		lines = append(lines, zone.Mark(fmt.Sprintf("%s-%d", prefix, n), line))
 	}
-	lines = append(lines, "", st.help.Render(m.t.MenuHelp), st.status.Render(m.status))
+	lines = append(lines, extra...)
+	lines = append(lines, "", st.help.Render(help), st.status.Render(m.status))
 	return strings.Join(lines, "\n")
 }
 
@@ -101,9 +126,13 @@ func (m Model) header(st styles) string {
 	if m.notesMode {
 		modeName = m.t.ModeNotes
 	}
-	return st.title.Render(m.difficultyName()) +
+	left := st.title.Render(m.difficultyName()) +
 		st.help.Render(" · "+formatDuration(m.game.Elapsed)+m.t.ModeLabel) +
 		st.item.Render(modeName)
+	buttons := zone.Mark("btn-save", st.item.Render("["+m.t.Save+"]")) + " " +
+		zone.Mark("btn-quit", st.item.Render("["+m.t.Quit+"]"))
+	gap := max(boardW-lipgloss.Width(left)-lipgloss.Width(buttons), 1)
+	return left + strings.Repeat(" ", gap) + buttons
 }
 
 // footer shows the shortcuts, or in the tutorial the current step wrapped

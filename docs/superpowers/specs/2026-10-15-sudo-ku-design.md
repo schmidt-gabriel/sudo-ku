@@ -106,6 +106,7 @@ Operations (no-ops on givens):
 - Directory: `$XDG_CONFIG_HOME/sudo-ku/`, or `~/.config/sudo-ku/` when unset. Same on macOS, Linux and Windows.
 - `save.json`: game in progress. Written after every move, when leaving to the menu and on quit; deleted on a win.
 - `settings.json`: `{"tutorialDone": bool, "language": "en" | "pt-BR"}`.
+- `history.json`: finished games, newest first, at most 100: `[{"difficulty", "elapsed", "finishedAt"}]`. Written on every win outside the tutorial; a corrupt file reads as empty and is replaced on the next win.
 - Atomic writes: write `<file>.tmp`, then `os.Rename`.
 - API on `*Store`: `LoadGame() (*game.Game, error)`, `SaveGame`, `DeleteGame`, `LoadSettings() (Settings, error)`, `SaveSettings`. A missing file is not an error (nil game / zero settings).
 
@@ -120,9 +121,10 @@ clicks), `styles.go`, `text.go`, `tutorial.go`.
 
 ### Screens
 
-- **Menu:** Continue (only with a save), New game, Tutorial, Language, Quit.
+- **Menu:** Continue (only with a save), New game, Tutorial, Language, Quit. Below it, "Recent games": the last 5 finished games (date and time in the language's format, difficulty, elapsed time).
 - **Difficulty:** Easy, Medium, Hard, Expert.
-- **Playing:** header line (difficulty, timer, value/notes mode), board, shortcut line, status line.
+- **Playing:** header line (difficulty, timer, value/notes mode, and clickable `[Save]` `[Quit]` on the right), board, shortcut line, status line.
+- **Quit dialog** (`q` or `[Quit]` during a game): Save and quit (`s`), Discard and quit (`d`, deletes the save), Cancel (`esc`). Arrows + enter and clicks work too; the timer pauses while it is open. In the tutorial and the menus `q` quits directly; `ctrl+c` always saves and quits.
 - **Won:** difficulty and time; New game, Menu.
 
 Lists work with arrows + enter and with clicks.
@@ -142,9 +144,11 @@ Lists work with arrows + enter and with clicks.
 | Erase | `0`, `x`, Backspace, Delete | |
 | Toggle notes mode | `n` | |
 | Undo / redo | `u`, `ctrl+z` / `ctrl+r` | |
-| Help / menu / quit | `?` / `esc` / `q` | |
+| Save now (play also autosaves after every move) | `s` | `[Save]` |
+| Help / menu | `?` / `esc` | |
+| Quit (asks save or discard) | `q` | `[Quit]` |
 
-`esc` and `q` save the game first.
+`esc` saves the game before returning to the menu.
 
 ### Look
 

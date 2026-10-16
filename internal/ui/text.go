@@ -12,6 +12,15 @@ type texts struct {
 	ModeLabel, ModeValue        string
 	ModeNotes                   string
 
+	// Game screen buttons and the quit dialog.
+	Save, Saved                                    string
+	QuitTitle, SaveAndQuit, DiscardAndQuit, Cancel string
+	QuitHelp                                       string
+
+	// Finished games listed on the menu.
+	RecentGames string
+	DateFormat  string // a time.Format layout
+
 	Won        string
 	WonDetail  string // difficulty, time
 	LoadFailed string
@@ -55,11 +64,21 @@ var english = texts{
 	Difficulties:     [4]string{"Easy", "Medium", "Hard", "Expert"},
 
 	MenuHelp:  "↑↓ move · enter select · esc back · q quit",
-	GameHelp:  "←↑↓→ move · 1-9 place · n notes · u undo · ? help · esc menu",
+	GameHelp:  "←↑↓→ move · 1-9 place · n notes · u undo · s save · ? help · esc menu · q quit",
 	WonHelp:   "enter new game · esc menu · q quit",
 	ModeLabel: " · Mode: ",
 	ModeValue: "Value",
 	ModeNotes: "Notes",
+
+	Save:           "Save",
+	Saved:          "Game saved",
+	QuitTitle:      "Quit the game?",
+	SaveAndQuit:    "Save and quit",
+	DiscardAndQuit: "Discard and quit",
+	Cancel:         "Cancel",
+	QuitHelp:       "s save · d discard · esc cancel",
+	RecentGames:    "Recent games",
+	DateFormat:     "Jan 02 15:04",
 
 	Won:        "Solved!",
 	WonDetail:  "%s puzzle in %s",
@@ -90,7 +109,8 @@ var english = texts{
 		"n                     toggle notes mode",
 		"u ctrl+z / ctrl+r     undo / redo",
 		"esc                   back to the menu (the game is saved)",
-		"q                     quit (the game is saved)",
+		"s                     save now (it also saves after every move)",
+		"q                     quit, saving or discarding the game",
 		"",
 		"Press any key or click to close",
 	},
@@ -108,11 +128,21 @@ var portuguese = texts{
 	Difficulties:     [4]string{"Fácil", "Médio", "Difícil", "Expert"},
 
 	MenuHelp:  "↑↓ mover · enter escolher · esc voltar · q sair",
-	GameHelp:  "←↑↓→ mover · 1-9 colocar · n notas · u desfazer · ? ajuda",
+	GameHelp:  "←↑↓→ mover · 1-9 colocar · n notas · u desfazer · s salvar · ? ajuda · q sair",
 	WonHelp:   "enter novo jogo · esc menu · q sair",
 	ModeLabel: " · Modo: ",
 	ModeValue: "Valor",
 	ModeNotes: "Notas",
+
+	Save:           "Salvar",
+	Saved:          "Jogo salvo",
+	QuitTitle:      "Sair do jogo?",
+	SaveAndQuit:    "Salvar e sair",
+	DiscardAndQuit: "Descartar e sair",
+	Cancel:         "Cancelar",
+	QuitHelp:       "s salvar · d descartar · esc cancelar",
+	RecentGames:    "Jogos recentes",
+	DateFormat:     "02/01 15:04",
 
 	Won:        "Resolvido!",
 	WonDetail:  "Nível %s resolvido em %s",
@@ -143,7 +173,8 @@ var portuguese = texts{
 		"n                     ligar ou desligar o modo notas",
 		"u ctrl+z / ctrl+r     desfazer / refazer",
 		"esc                   voltar ao menu (o jogo fica salvo)",
-		"q                     sair (o jogo fica salvo)",
+		"s                     salvar agora (também salva a cada jogada)",
+		"q                     sair, salvando ou descartando o jogo",
 		"",
 		"Aperte qualquer tecla ou clique para fechar",
 	},

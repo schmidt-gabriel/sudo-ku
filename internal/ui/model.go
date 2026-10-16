@@ -30,6 +30,8 @@ type Store interface {
 	DeleteGame() error
 	LoadSettings() (store.Settings, error)
 	SaveSettings(store.Settings) error
+	LoadHistory() ([]store.Result, error)
+	AddResult(store.Result) error
 }
 
 type menuItem int
@@ -42,6 +44,13 @@ const (
 	itemQuit
 )
 
+// Choices in the quit dialog, in display order.
+const (
+	quitSave = iota
+	quitDiscard
+	quitCancel
+)
+
 type tickMsg struct{}
 
 // Model is the whole UI state.
@@ -49,7 +58,9 @@ type Model struct {
 	store    Store
 	rng      *rand.Rand
 	settings store.Settings
-	t        *texts // the player's language
+	t        *texts           // the player's language
+	now      func() time.Time // the clock, replaceable in tests
+	history  []store.Result   // finished games, newest first
 
 	mode      mode
 	game      *game.Game // the game being played, or the saved game in the menu
@@ -58,6 +69,9 @@ type Model struct {
 	showHelp  bool
 	menuIndex int
 	status    string // one-line message under the board or menu
+
+	confirmQuit bool // the save-or-discard dialog is open
+	quitIndex   int  // highlighted choice in that dialog
 
 	tutorialStep int  // index into tutorialSteps
 	sawConflict  bool // the tutorial's conflict step saw a conflict
@@ -68,7 +82,7 @@ type Model struct {
 
 // New loads settings and any saved game, and opens the menu.
 func New(st Store, rng *rand.Rand) Model {
-	m := Model{store: st, rng: rng, dark: true}
+	m := Model{store: st, rng: rng, dark: true, now: time.Now}
 	m.settings, _ = st.LoadSettings() // a broken settings file just means defaults
 	m.t = textsFor(m.settings.Language)
 	m.toMenu()
@@ -93,7 +107,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.BackgroundColorMsg:
 		m.dark = msg.IsDark()
 	case tickMsg:
-		if m.mode == modePlaying && !m.showHelp && !m.tooSmall() {
+		if m.mode == modePlaying && !m.showHelp && !m.confirmQuit && !m.tooSmall() {
 			m.game.Tick(time.Second)
 		}
 		return m, tick()
@@ -112,12 +126,18 @@ func (m Model) handleKey(key string) (Model, tea.Cmd) {
 	if key == "ctrl+c" {
 		return m, m.quit()
 	}
-	if m.tooSmall() && key != "q" {
-		return m, nil // the board is hidden, so only quitting is allowed
+	if m.tooSmall() {
+		if key == "q" {
+			return m, m.quit() // the board is hidden, so quit without asking
+		}
+		return m, nil
 	}
 	if m.showHelp {
 		m.showHelp = false
 		return m, nil
+	}
+	if m.confirmQuit {
+		return m.quitKey(key)
 	}
 	switch m.mode {
 	case modeMenu:
@@ -208,6 +228,8 @@ func (m Model) boardKey(key string) (Model, tea.Cmd) {
 		m.redo()
 	case "?":
 		m.showHelp = true
+	case "s":
+		m.saveNow()
 	case "enter":
 		if m.mode == modeTutorial && tutorialSteps[m.tutorialStep].done == nil {
 			m.tutorialStep++
@@ -220,9 +242,45 @@ func (m Model) boardKey(key string) (Model, tea.Cmd) {
 		m.save()
 		m.toMenu()
 	case "q":
-		return m, m.quit()
+		if m.mode == modeTutorial {
+			return m, m.quit()
+		}
+		m.confirmQuit, m.quitIndex = true, quitSave
 	}
 	m.advanceTutorial()
+	return m, nil
+}
+
+func (m Model) quitKey(key string) (Model, tea.Cmd) {
+	switch key {
+	case "s":
+		return m.chooseQuit(quitSave)
+	case "d":
+		return m.chooseQuit(quitDiscard)
+	case "esc", "c":
+		return m.chooseQuit(quitCancel)
+	case "up", "k", "left", "h":
+		m.quitIndex = max(m.quitIndex-1, quitSave)
+	case "down", "j", "right", "l":
+		m.quitIndex = min(m.quitIndex+1, quitCancel)
+	case "enter":
+		return m.chooseQuit(m.quitIndex)
+	}
+	return m, nil
+}
+
+// chooseQuit closes the quit dialog: save and quit, discard the game and
+// quit, or keep playing.
+func (m Model) chooseQuit(choice int) (Model, tea.Cmd) {
+	m.confirmQuit = false
+	switch choice {
+	case quitSave:
+		m.save()
+		return m, tea.Quit
+	case quitDiscard:
+		_ = m.store.DeleteGame() // quitting anyway; a leftover save only offers Continue
+		return m, tea.Quit
+	}
 	return m, nil
 }
 
@@ -264,6 +322,10 @@ func (m *Model) afterMove() {
 	}
 	if m.game.Won() {
 		m.mode = modeWon
+		result := store.Result{Difficulty: m.game.Difficulty, Elapsed: m.game.Elapsed, FinishedAt: m.now()}
+		if err := m.store.AddResult(result); err != nil {
+			m.status = m.t.SaveFailed
+		}
 		if err := m.store.DeleteGame(); err != nil {
 			m.status = m.t.SaveFailed
 		}
@@ -282,6 +344,15 @@ func (m *Model) save() {
 	if err := m.store.SaveGame(m.game); err != nil {
 		m.status = m.t.SaveFailed
 	}
+}
+
+// saveNow saves on request and says so; play also saves after every move.
+func (m *Model) saveNow() {
+	if m.mode != modePlaying {
+		return
+	}
+	m.status = m.t.Saved
+	m.save() // replaces the status on failure
 }
 
 func (m *Model) quit() tea.Cmd {
@@ -303,9 +374,11 @@ func (m *Model) toggleLanguage() {
 	}
 }
 
-// toMenu opens the main menu, loading the saved game so it can be continued.
+// toMenu opens the main menu, loading the saved game so it can be continued
+// and the finished games to list.
 func (m *Model) toMenu() {
-	m.mode, m.menuIndex, m.notesMode = modeMenu, 0, false
+	m.mode, m.menuIndex, m.notesMode, m.confirmQuit = modeMenu, 0, false, false
+	m.history, _ = m.store.LoadHistory() // a broken history just shows nothing
 	g, err := m.store.LoadGame()
 	if err != nil {
 		m.status = m.t.LoadFailed

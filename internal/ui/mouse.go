@@ -19,6 +19,14 @@ func init() { zone.NewGlobal() }
 func (m Model) hit(msg tea.MouseClickMsg) string {
 	switch m.mode {
 	case modePlaying, modeTutorial:
+		if m.confirmQuit {
+			return firstHit(msg, listZones("quit", quitCancel+1))
+		}
+		if m.mode == modePlaying {
+			if id := firstHit(msg, []string{"btn-save", "btn-quit"}); id != "" {
+				return id
+			}
+		}
 		if z := zone.Get("board"); z != nil && z.InBounds(msg) {
 			if i, ok := cellAt(z.Pos(msg)); ok {
 				return fmt.Sprintf("cell-%d", i)
@@ -65,7 +73,20 @@ func (m Model) handleClick(id string) (Model, tea.Cmd) {
 	}
 	name, arg, _ := strings.Cut(id, "-")
 	n, _ := strconv.Atoi(arg)
+	if m.confirmQuit && name != "quit" {
+		return m, nil // only the dialog's choices respond while it is open
+	}
 	switch name {
+	case "quit":
+		return m.chooseQuit(n)
+	case "btn":
+		switch {
+		case m.mode != modePlaying:
+		case arg == "save":
+			m.saveNow()
+		case arg == "quit":
+			m.confirmQuit, m.quitIndex = true, quitSave
+		}
 	case "cell":
 		m.cursor = n
 	case "menu":
