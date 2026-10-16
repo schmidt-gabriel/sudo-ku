@@ -155,9 +155,8 @@ Lists work with arrows + enter and with clicks.
 Colors come from `lipgloss.LightDark`, driven by `tea.BackgroundColorMsg`
 (dark is assumed until the terminal answers):
 
-- Givens: bold neutral. Player digits: blue. Conflicts: bold red.
-- Selected cell: the only strong background. Its row, column and box: soft background.
-- Cells with the same digit as the selection: bold amber text, no background.
+- A cell's background tells what it holds: blue for the player's digits, red for conflicts (white text on both), none for clues (bold text). The selected cell uses a lighter shade of its own color (light gray for clues and empty cells). Its row, column and box get a soft gray, except blue and red cells, which keep their color.
+- Digits equal to the selected one: underlined and bold.
 - Notes: grey (main text color on the selected cell).
 - Backgrounds and amber are xterm-256 palette colors so 256-color terminals show them unchanged.
 

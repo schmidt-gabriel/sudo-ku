@@ -144,12 +144,22 @@ func (m Model) cellLine(i, sub int) string {
 	return line
 }
 
-// cellBg is the background of cell i: strong for the selected cell, yellow
-// for the tutorial's target, soft for the selection's row, column and box,
-// and none otherwise.
-func (m Model) cellBg(st styles, i int) color.Color {
+// cellBg is the background of cell i. It tells what the cell holds: red
+// for a conflict, blue for the player's digit, each lighter when selected.
+// Other cells are light gray when selected, yellow as the tutorial's target,
+// soft gray in the selection's row, column and box, and plain otherwise.
+func (m Model) cellBg(st styles, i int, conflict bool) color.Color {
 	sel := m.cursor
+	player := m.game.Values[i] != 0 && !m.game.IsGiven(i)
 	switch {
+	case conflict && i == sel:
+		return st.conflictSelBg
+	case conflict:
+		return st.conflictBg
+	case player && i == sel:
+		return st.playerSelBg
+	case player:
+		return st.playerBg
 	case i == sel:
 		return st.selectedBg
 	case m.mode == modeTutorial && m.tutorialStep <= 2 && i == tutorialTarget:
@@ -168,23 +178,22 @@ func paint(s lipgloss.Style, bg color.Color) lipgloss.Style {
 	return s.Background(bg)
 }
 
-// cellStyle colors a cell's text: conflicts red, clues bold white, the
-// player's digits blue, notes grey. Digits equal to the selected one are
-// underlined and bold but keep their color, so the player can always tell
-// which digits they may change, on the selection too.
+// cellStyle colors a cell's text over cellBg: bold for clues and
+// conflicts, onColor over the blue and red backgrounds, grey for notes.
+// Digits equal to the selected one are underlined and bold.
 func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	g, sel := m.game, m.cursor
-	s := paint(lipgloss.NewStyle(), m.cellBg(st, i))
+	s := paint(lipgloss.NewStyle(), m.cellBg(st, i, conflict))
 	if i != sel && g.Values[i] != 0 && g.Values[i] == g.Values[sel] {
 		s = s.Underline(true).Bold(true)
 	}
 	switch {
 	case conflict:
-		return s.Foreground(st.conflict).Bold(true)
+		return s.Foreground(st.onColor).Bold(true)
 	case g.IsGiven(i):
 		return s.Foreground(st.text).Bold(true)
 	case g.Values[i] != 0:
-		return s.Foreground(st.accent).Bold(s.GetBold() || i == sel)
+		return s.Foreground(st.onColor)
 	case i == sel:
 		return s.Foreground(st.text) // notes stay readable on the selection
 	}
