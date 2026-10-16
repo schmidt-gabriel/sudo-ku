@@ -46,7 +46,8 @@ The terminal needs to be at least 91 columns by 32 rows.
 
 Placing a digit removes it from the notes in the same row, column and box.
 Digits on a blue background are yours and can be changed; the others are
-clues. Repeated digits get a red background. Your game is saved after every move in `~/.config/sudo-ku`
+clues. Repeated digits get a red background, and once all nine of a digit
+are in their right places they turn a soft green. Your game is saved after every move in `~/.config/sudo-ku`
 (or `$XDG_CONFIG_HOME/sudo-ku`), and the menu lists your last finished
 games with their difficulty and time.
 

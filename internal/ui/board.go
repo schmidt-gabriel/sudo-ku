@@ -179,7 +179,8 @@ func paint(s lipgloss.Style, bg color.Color) lipgloss.Style {
 }
 
 // cellStyle colors a cell's text over cellBg: bold for clues and
-// conflicts, onColor over the blue and red backgrounds, grey for notes.
+// conflicts, onColor over the blue and red backgrounds, grey for notes, and
+// a soft green once all nine of that digit are in place.
 // Digits equal to the selected one are underlined and bold.
 func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	g, sel := m.game, m.cursor
@@ -190,6 +191,8 @@ func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	switch {
 	case conflict:
 		return s.Foreground(st.onColor).Bold(true)
+	case i != sel && g.Values[i] != 0 && g.Completed(g.Values[i]):
+		return s.Foreground(st.done).Bold(s.GetBold() || g.IsGiven(i))
 	case g.IsGiven(i):
 		return s.Foreground(st.text).Bold(true)
 	case g.Values[i] != 0:

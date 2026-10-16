@@ -202,3 +202,35 @@ func TestTick(t *testing.T) {
 		t.Errorf("Elapsed = %v, want 3s", g.Elapsed)
 	}
 }
+
+func TestCompleted(t *testing.T) {
+	g := newGame()
+	if g.Completed(5) {
+		t.Fatal("5 is not complete in the starting puzzle")
+	}
+	var fives []int
+	for i, v := range g.Solution {
+		if v == 5 && !g.IsGiven(i) {
+			fives = append(fives, i)
+		}
+	}
+	for _, i := range fives[:len(fives)-1] {
+		g.Set(i, 5)
+	}
+	if g.Completed(5) {
+		t.Fatal("5 is complete with one still missing")
+	}
+	last := fives[len(fives)-1]
+	g.Set(last, 5)
+	if !g.Completed(5) {
+		t.Fatal("all nine 5s are in place but Completed(5) is false")
+	}
+	g.Clear(last)
+	g.Set(last, 4) // wrong digit where a 5 belongs
+	if g.Completed(5) {
+		t.Error("5 counted as complete with a wrong digit in one of its cells")
+	}
+	if g.Completed(0) || g.Completed(10) {
+		t.Error("out-of-range digits are never complete")
+	}
+}

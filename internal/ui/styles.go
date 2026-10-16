@@ -8,10 +8,10 @@ import (
 
 // styles holds every color and style, picked for a light or dark terminal.
 type styles struct {
-	text, muted, accent, conflict, onColor color.Color
-	peerBg, selectedBg, targetBg           color.Color
-	playerBg, playerSelBg                  color.Color
-	conflictBg, conflictSelBg              color.Color
+	text, muted, accent, conflict, onColor, done color.Color
+	peerBg, selectedBg, targetBg                 color.Color
+	playerBg, playerSelBg                        color.Color
+	conflictBg, conflictSelBg                    color.Color
 
 	// frame draws the box borders; border the thin lines between cells.
 	frame, border, title, help, status, item, itemOn lipgloss.Style
@@ -30,6 +30,7 @@ func newStyles(dark bool) styles {
 		accent:        ld(c("25"), c("81")),
 		conflict:      ld(c("160"), c("203")),
 		onColor:       ld(c("16"), c("231")),
+		done:          ld(c("28"), c("114")), // digits whose nine cells are all solved
 		peerBg:        ld(c("254"), c("237")),
 		selectedBg:    ld(c("250"), c("240")),
 		targetBg:      ld(c("229"), c("58")),

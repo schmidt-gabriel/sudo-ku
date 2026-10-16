@@ -333,3 +333,38 @@ func TestCellBackgroundsTellWhatACellIs(t *testing.T) {
 		}
 	}
 }
+
+func TestCompletedDigitsChangeTone(t *testing.T) {
+	for _, dark := range []bool{true, false} {
+		st := newStyles(dark)
+		m := playing(tutorialSeen())
+		m.cursor = 2
+		var playerFive int
+		for i, v := range m.game.Solution {
+			if v == 5 && !m.game.IsGiven(i) {
+				m.game.Set(i, 5)
+				playerFive = i
+			}
+		}
+		if got := m.cellStyle(st, 0, false).GetForeground(); got != st.done {
+			t.Errorf("dark=%v: a clue of a completed digit uses %v, want done", dark, got)
+		}
+		s := m.cellStyle(st, playerFive, false)
+		if s.GetForeground() != st.done || s.GetBackground() != st.playerBg {
+			t.Errorf("dark=%v: a player's completed digit should keep the blue background with the done tone", dark)
+		}
+		if got := m.cellStyle(st, 1, false).GetForeground(); got != st.text {
+			t.Errorf("dark=%v: an incomplete digit (3) changed tone: %v", dark, got)
+		}
+		if got := m.cellStyle(st, 0, true).GetForeground(); got != st.onColor {
+			t.Errorf("dark=%v: a conflict should keep its colors even for a completed digit", dark)
+		}
+		m.cursor = playerFive
+		if got := m.cellStyle(st, playerFive, false).GetForeground(); got != st.onColor {
+			t.Errorf("dark=%v: the selected cell keeps its normal text for contrast, got %v", dark, got)
+		}
+		if st.done == st.text || st.done == st.accent {
+			t.Errorf("dark=%v: done must differ from the normal text colors", dark)
+		}
+	}
+}
