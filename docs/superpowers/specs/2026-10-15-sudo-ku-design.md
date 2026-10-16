@@ -11,7 +11,7 @@ to publish as an open source project.
 Success criteria:
 
 - Install with one command (`brew` or `go install`), open it and play without reading docs.
-- Fully playable with the mouse **or** fully with the keyboard (arrow keys).
+- Fully playable with the keyboard (arrow keys). The mouse selects cells and drives the menus.
 - Interactive tutorial on first run.
 - Simple code: few layers, small single-purpose files, no speculative abstractions.
 - The engine can be reused by another UI later (desktop GUI, web via WASM) without changes.
@@ -27,9 +27,15 @@ seeds/daily puzzle, themes, difficulty rated by solving techniques.
 
 ## Language
 
-Code, UI text, README, docs, commits and PR descriptions are in **English**.
-All UI strings live in one file (`internal/ui/text.go`) so a future
-translation is easy.
+Code, README, docs, commits and PR descriptions are in **English**.
+
+The UI is available in English and Brazilian Portuguese. All UI strings live
+in one file (`internal/ui/text.go`) as one `texts` value per language. The game
+always starts in English (no locale detection); a "Language" menu item toggles
+between the two and the choice is saved in `settings.json` as
+`"language": "en" | "pt-BR"`. An unknown value falls back to English.
+Difficulty names are translated by the UI; `sudoku.Difficulty.String()` stays
+English.
 
 ## Layout
 
@@ -99,7 +105,8 @@ Operations (no-ops on givens):
 
 - Directory: `$XDG_CONFIG_HOME/sudo-ku/`, or `~/.config/sudo-ku/` when unset. Same on macOS, Linux and Windows.
 - `save.json`: game in progress. Written after every move, when leaving to the menu and on quit; deleted on a win.
-- `settings.json`: `{"tutorialDone": bool}`.
+- `settings.json`: `{"tutorialDone": bool, "language": "en" | "pt-BR"}`.
+- `history.json`: finished games, newest first, at most 100: `[{"difficulty", "elapsed", "finishedAt"}]`. Written on every win outside the tutorial; a corrupt file reads as empty and is replaced on the next win.
 - Atomic writes: write `<file>.tmp`, then `os.Rename`.
 - API on `*Store`: `LoadGame() (*game.Game, error)`, `SaveGame`, `DeleteGame`, `LoadSettings() (Settings, error)`, `SaveSettings`. A missing file is not an error (nil game / zero settings).
 
@@ -114,41 +121,44 @@ clicks), `styles.go`, `text.go`, `tutorial.go`.
 
 ### Screens
 
-- **Menu:** Continue (only with a save), New game, Tutorial, Quit.
+- **Menu:** Continue (only with a save), New game, Tutorial, Language, Quit. Below it, "Recent games": the last 5 finished games (date and time in the language's format, difficulty, elapsed time).
 - **Difficulty:** Easy, Medium, Hard, Expert.
-- **Playing:** header line (difficulty, timer, value/notes mode), board, clickable number pad, shortcut line, status line.
+- **Playing:** header line (difficulty, timer, value/notes mode, and clickable `[Save]` `[Quit]` on the right), board, shortcut line, status line.
+- **Quit dialog** (`q` or `[Quit]` during a game): Save and quit (`s`), Discard and quit (`d`, deletes the save), Cancel (`esc`). Arrows + enter and clicks work too; the timer pauses while it is open. In the tutorial and the menus `q` quits directly; `ctrl+c` always saves and quits.
 - **Won:** difficulty and time; New game, Menu.
 
 Lists work with arrows + enter and with clicks.
 
 ### Board
 
-- Cells are 5x3 characters so a 3x3 grid of notes fits. Thin `│` between cells, thick borders around boxes. The board is 55x31.
-- Minimum terminal: 60x36. Below that, only a message asking for a bigger window is shown.
-- Number pad: `[1]`..`[9]`, `[Erase]`, `[Notes]`, `[Undo]`.
+- Cells are 9x2 characters. A digit sits centered on the first line; notes 1-5 fill the first line (`1 2 3 4 5`) and 6-9 the second, shifted half a step (` 6 7 8 9 `), each digit in a fixed spot.
+- Thin `│` and `─` lines between all cells in a dim color; box borders `━┃` with matching junctions (`┯`, `┿`, `╂`, ...) in a bright bold color so boxes stand out. Lines are never painted, so every highlighted cell sits inside the same even margin.
+- The board is 91x28. Minimum terminal: 91x32. Below that, only a message asking for a bigger window is shown.
 
 ### Controls
 
 | Action | Keyboard | Mouse |
 |---|---|---|
 | Move / select | arrows, `hjkl` | click a cell |
-| Digit (or note in notes mode) | `1`-`9` | `[n]` button |
-| Erase | `0`, `x`, Backspace, Delete | `[Erase]` |
-| Toggle notes mode | `n` | `[Notes]` |
-| Undo / redo | `u`, `ctrl+z` / `ctrl+r` | `[Undo]` |
-| Help / menu / quit | `?` / `esc` / `q` | (keyboard only) |
+| Digit (or note in notes mode) | `1`-`9` | |
+| Erase | `0`, `x`, Backspace, Delete | |
+| Toggle notes mode | `n` | |
+| Undo / redo | `u`, `ctrl+z` / `ctrl+r` | |
+| Save now (play also autosaves after every move) | `s` | `[Save]` |
+| Help / menu | `?` / `esc` | |
+| Quit (asks save or discard) | `q` | `[Quit]` |
 
-`esc` and `q` save the game first.
+`esc` saves the game before returning to the menu.
 
 ### Look
 
 Colors come from `lipgloss.LightDark`, driven by `tea.BackgroundColorMsg`
 (dark is assumed until the terminal answers):
 
-- Givens: bold neutral. Player digits: blue. Conflicts: bold red.
-- Selected cell: strong background. Its row, column and box: soft background.
-- Cells with the same digit as the selection: highlighted.
-- Notes: grey.
+- A cell's background tells what it holds: blue for the player's digits, red for conflicts (white text on both), none for clues (bold text). The selected cell uses a lighter shade of its own color (light gray for clues and empty cells). Its row, column and box get a soft gray, except blue and red cells, which keep their color.
+- Digits equal to the selected one: underlined and bold.
+- Notes: grey (main text color on the selected cell).
+- Backgrounds and amber are xterm-256 palette colors so 256-color terminals show them unchanged.
 
 ### Timer
 
@@ -158,8 +168,8 @@ A 1s `tea.Tick` calls `game.Tick` only in `playing` mode while help is closed.
 
 `View().MouseMode = tea.MouseModeCellMotion` plus bubblezone. The whole board is
 one zone; the click position inside it maps to a cell with plain arithmetic
-(`cellAt`). Buttons and list items are zones (`num-<n>`, `btn-<name>`,
-`menu-<n>`, `diff-<n>`, `won-<name>`). Only zones of the current mode are
+(`cellAt`). List items and buttons are zones (`menu-<n>`, `diff-<n>`,
+`won-<name>`). Only zones of the current mode are
 checked, so stale zones from a previous screen never fire.
 
 ## Tutorial

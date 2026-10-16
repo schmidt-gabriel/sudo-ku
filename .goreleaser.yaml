@@ -1,0 +1,50 @@
+version: 2
+
+project_name: sudo-ku
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/sudo-ku
+    binary: sudo-ku
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+homebrew_casks:
+  - name: sudo-ku
+    repository:
+      owner: schmidt-gabriel
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: https://github.com/schmidt-gabriel/sudo-ku
+    description: Sudoku in your terminal with notes, undo and an interactive tutorial
+    license: MIT
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/sudo-ku"]
+          end
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
