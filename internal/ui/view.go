@@ -33,19 +33,19 @@ func (m Model) tooSmall() bool {
 
 func (m Model) render() string {
 	if m.tooSmall() {
-		return fmt.Sprintf(textTooSmall, minWidth, minHeight, m.width, m.height)
+		return fmt.Sprintf(m.t.TooSmall, minWidth, minHeight, m.width, m.height)
 	}
 	st := newStyles(m.dark)
 	if m.showHelp {
-		return st.title.Render(helpLines[0]) + "\n" + strings.Join(helpLines[1:], "\n")
+		return st.title.Render(m.t.Help[0]) + "\n" + strings.Join(m.t.Help[1:], "\n")
 	}
 	switch m.mode {
 	case modeDifficulty:
 		var opts []string
 		for _, d := range sudoku.Difficulties {
-			opts = append(opts, d.String())
+			opts = append(opts, m.t.Difficulties[d])
 		}
-		return m.renderList(st, textChooseDifficulty, opts, "diff")
+		return m.renderList(st, m.t.ChooseDifficulty, opts, "diff")
 	case modePlaying, modeTutorial:
 		return m.renderGame(st)
 	case modeWon:
@@ -56,16 +56,17 @@ func (m Model) render() string {
 
 func (m Model) renderMenu(st styles) string {
 	labels := map[menuItem]string{
-		itemContinue: textContinue,
-		itemNewGame:  textNewGame,
-		itemTutorial: textTutorial,
-		itemQuit:     textQuit,
+		itemContinue: m.t.Continue,
+		itemNewGame:  m.t.NewGame,
+		itemTutorial: m.t.Tutorial,
+		itemLanguage: m.t.Language,
+		itemQuit:     m.t.Quit,
 	}
 	var opts []string
 	for _, item := range m.menuItems() {
 		opts = append(opts, labels[item])
 	}
-	return m.renderList(st, textTitle, opts, "menu")
+	return m.renderList(st, m.t.Title, opts, "menu")
 }
 
 // renderList draws a title over clickable options with zone IDs
@@ -79,7 +80,7 @@ func (m Model) renderList(st styles, title string, opts []string, prefix string)
 		}
 		lines = append(lines, zone.Mark(fmt.Sprintf("%s-%d", prefix, n), line))
 	}
-	lines = append(lines, "", st.help.Render(textMenuHelp), st.status.Render(m.status))
+	lines = append(lines, "", st.help.Render(m.t.MenuHelp), st.status.Render(m.status))
 	return strings.Join(lines, "\n")
 }
 
@@ -95,14 +96,14 @@ func (m Model) renderGame(st styles) string {
 
 func (m Model) header(st styles) string {
 	if m.mode == modeTutorial {
-		return st.title.Render(textTutorial) + st.help.Render(textTutorialSkip)
+		return st.title.Render(m.t.Tutorial) + st.help.Render(m.t.TutorialSkip)
 	}
-	modeName := textModeValue
+	modeName := m.t.ModeValue
 	if m.notesMode {
-		modeName = textModeNotes
+		modeName = m.t.ModeNotes
 	}
-	return st.title.Render(m.game.Difficulty.String()) +
-		st.help.Render(" · "+formatDuration(m.game.Elapsed)+textModeLabel) +
+	return st.title.Render(m.difficultyName()) +
+		st.help.Render(" · "+formatDuration(m.game.Elapsed)+m.t.ModeLabel) +
 		st.item.Render(modeName)
 }
 
@@ -110,10 +111,10 @@ func (m Model) header(st styles) string {
 // to at most two lines.
 func (m Model) footer(st styles) string {
 	if m.mode == modeTutorial {
-		text := fmt.Sprintf("(%d/%d) %s", m.tutorialStep+1, len(tutorialSteps), tutorialSteps[m.tutorialStep].text)
+		text := fmt.Sprintf("(%d/%d) %s", m.tutorialStep+1, len(tutorialSteps), m.t.TutorialSteps[m.tutorialStep])
 		return st.item.Width(minWidth).Render(text)
 	}
-	return st.help.Render(textGameHelp)
+	return st.help.Render(m.t.GameHelp)
 }
 
 func (m Model) renderPad(st styles) string {
@@ -126,25 +127,33 @@ func (m Model) renderPad(st styles) string {
 		notes = st.itemOn
 	}
 	parts = append(parts,
-		zone.Mark("btn-erase", st.item.Render("["+textErase+"]")),
-		zone.Mark("btn-notes", notes.Render("["+textNotes+"]")),
-		zone.Mark("btn-undo", st.item.Render("["+textUndo+"]")),
+		zone.Mark("btn-erase", st.item.Render("["+m.t.Erase+"]")),
+		zone.Mark("btn-notes", notes.Render("["+m.t.Notes+"]")),
+		zone.Mark("btn-undo", st.item.Render("["+m.t.Undo+"]")),
 	)
 	return strings.Join(parts, " ")
 }
 
 func (m Model) renderWon(st styles) string {
 	return strings.Join([]string{
-		st.title.Render(textWon),
+		st.title.Render(m.t.Won),
 		"",
-		fmt.Sprintf(textWonDetail, m.game.Difficulty, formatDuration(m.game.Elapsed)),
+		fmt.Sprintf(m.t.WonDetail, m.difficultyName(), formatDuration(m.game.Elapsed)),
 		"",
-		zone.Mark("won-new", st.itemOn.Render("["+textNewGame+"]")) + "  " +
-			zone.Mark("won-menu", st.item.Render("["+textMenu+"]")),
+		zone.Mark("won-new", st.itemOn.Render("["+m.t.NewGame+"]")) + "  " +
+			zone.Mark("won-menu", st.item.Render("["+m.t.Menu+"]")),
 		"",
-		st.help.Render(textWonHelp),
+		st.help.Render(m.t.WonHelp),
 		st.status.Render(m.status),
 	}, "\n")
+}
+
+// difficultyName names the current game's difficulty in the player's language.
+func (m Model) difficultyName() string {
+	if !m.game.Difficulty.Valid() {
+		return m.game.Difficulty.String()
+	}
+	return m.t.Difficulties[m.game.Difficulty]
 }
 
 // formatDuration shows 04:12, or 1:02:03 past an hour.

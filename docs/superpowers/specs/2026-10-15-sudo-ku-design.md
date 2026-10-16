@@ -27,9 +27,15 @@ seeds/daily puzzle, themes, difficulty rated by solving techniques.
 
 ## Language
 
-Code, UI text, README, docs, commits and PR descriptions are in **English**.
-All UI strings live in one file (`internal/ui/text.go`) so a future
-translation is easy.
+Code, README, docs, commits and PR descriptions are in **English**.
+
+The UI is available in English and Brazilian Portuguese. All UI strings live
+in one file (`internal/ui/text.go`) as one `texts` value per language. The game
+always starts in English (no locale detection); a "Language" menu item toggles
+between the two and the choice is saved in `settings.json` as
+`"language": "en" | "pt-BR"`. An unknown value falls back to English.
+Difficulty names are translated by the UI; `sudoku.Difficulty.String()` stays
+English.
 
 ## Layout
 
@@ -99,7 +105,7 @@ Operations (no-ops on givens):
 
 - Directory: `$XDG_CONFIG_HOME/sudo-ku/`, or `~/.config/sudo-ku/` when unset. Same on macOS, Linux and Windows.
 - `save.json`: game in progress. Written after every move, when leaving to the menu and on quit; deleted on a win.
-- `settings.json`: `{"tutorialDone": bool}`.
+- `settings.json`: `{"tutorialDone": bool, "language": "en" | "pt-BR"}`.
 - Atomic writes: write `<file>.tmp`, then `os.Rename`.
 - API on `*Store`: `LoadGame() (*game.Game, error)`, `SaveGame`, `DeleteGame`, `LoadSettings() (Settings, error)`, `SaveSettings`. A missing file is not an error (nil game / zero settings).
 
@@ -114,7 +120,7 @@ clicks), `styles.go`, `text.go`, `tutorial.go`.
 
 ### Screens
 
-- **Menu:** Continue (only with a save), New game, Tutorial, Quit.
+- **Menu:** Continue (only with a save), New game, Tutorial, Language, Quit.
 - **Difficulty:** Easy, Medium, Hard, Expert.
 - **Playing:** header line (difficulty, timer, value/notes mode), board, clickable number pad, shortcut line, status line.
 - **Won:** difficulty and time; New game, Menu.

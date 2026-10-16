@@ -20,7 +20,8 @@ const (
 
 // Settings are the user's preferences.
 type Settings struct {
-	TutorialDone bool `json:"tutorialDone"`
+	TutorialDone bool   `json:"tutorialDone"`
+	Language     string `json:"language,omitempty"` // "en" or "pt-BR"; empty means English
 }
 
 // Store reads and writes files in one directory.

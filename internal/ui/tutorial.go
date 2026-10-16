@@ -16,20 +16,21 @@ var tutorialBlanks = []int{2, 15, 30, 40, 58, 75}
 // tutorialTarget is the cell the tutorial asks the player to fill first.
 const tutorialTarget = 40
 
+// tutorialStep is one step of the tutorial. Its text is texts.TutorialSteps
+// at the same index.
 type tutorialStep struct {
-	text string
 	// done reports whether the player finished the step. Nil means the
 	// step waits for enter.
 	done func(m *Model) bool
 }
 
 var tutorialSteps = []tutorialStep{
-	{text: textTutorialRules},
-	{text: textTutorialMove, done: func(m *Model) bool { return m.cursor == tutorialTarget }},
-	{text: textTutorialPlace, done: func(m *Model) bool {
+	{},
+	{done: func(m *Model) bool { return m.cursor == tutorialTarget }},
+	{done: func(m *Model) bool {
 		return m.game.Values[tutorialTarget] == tutorialSolution[tutorialTarget]
 	}},
-	{text: textTutorialNotes, done: func(m *Model) bool {
+	{done: func(m *Model) bool {
 		for i, notes := range m.game.Notes {
 			if m.game.Values[i] == 0 && bits.OnesCount16(notes) >= 2 {
 				return true
@@ -37,13 +38,13 @@ var tutorialSteps = []tutorialStep{
 		}
 		return false
 	}},
-	{text: textTutorialConflict, done: func(m *Model) bool {
+	{done: func(m *Model) bool {
 		if len(m.game.Conflicts()) > 0 {
 			m.sawConflict = true
 		}
 		return m.sawConflict && len(m.game.Conflicts()) == 0
 	}},
-	{text: textTutorialFinish, done: func(m *Model) bool { return m.game.Won() }},
+	{done: func(m *Model) bool { return m.game.Won() }},
 }
 
 func (m *Model) startTutorial() {
@@ -69,14 +70,14 @@ func (m *Model) advanceTutorial() {
 		}
 		m.tutorialStep++
 	}
-	m.finishTutorial(textTutorialDone)
+	m.finishTutorial(m.t.TutorialDone)
 }
 
 // finishTutorial records that the tutorial was seen and opens the menu.
 func (m *Model) finishTutorial(status string) {
 	m.settings.TutorialDone = true
 	if err := m.store.SaveSettings(m.settings); err != nil {
-		status = textSaveFailed
+		status = m.t.SaveFailed
 	}
 	m.toMenu()
 	m.status = status

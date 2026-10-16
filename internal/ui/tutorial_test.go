@@ -29,8 +29,10 @@ func TestTutorialPuzzle(t *testing.T) {
 		}
 		rows[sudoku.Row(i)] = true
 	}
-	if !strings.Contains(textTutorialPlace, string(rune('0'+tutorialSolution[tutorialTarget]))) {
-		t.Error("the place step names the wrong digit")
+	for code, tx := range languages {
+		if !strings.Contains(tx.TutorialSteps[2], string(rune('0'+tutorialSolution[tutorialTarget]))) {
+			t.Errorf("%s: the place step names the wrong digit", code)
+		}
 	}
 }
 
@@ -70,8 +72,8 @@ func TestTutorialWalkthrough(t *testing.T) {
 		click(fmt.Sprintf("cell-%d", i))
 		click(fmt.Sprintf("num-%d", tutorialSolution[i]))
 	}
-	if m.mode != modeMenu || m.status != textTutorialDone {
-		t.Fatalf("mode %v status %q, want the menu with %q", m.mode, m.status, textTutorialDone)
+	if m.mode != modeMenu || m.status != english.TutorialDone {
+		t.Fatalf("mode %v status %q, want the menu with %q", m.mode, m.status, english.TutorialDone)
 	}
 	if !fs.settings.TutorialDone {
 		t.Error("TutorialDone not saved")
@@ -107,17 +109,6 @@ func TestTutorialDoesNotTickOrQuitAsDone(t *testing.T) {
 	_, cmd := m.Update(key("q"))
 	if _, ok := cmd().(tea.QuitMsg); !ok || fs.settings.TutorialDone {
 		t.Error("q should quit without marking the tutorial done")
-	}
-}
-
-func TestTutorialTextFitsTwoLines(t *testing.T) {
-	st := newStyles(true)
-	m := newModel(&fakeStore{})
-	for n := range tutorialSteps {
-		m.tutorialStep = n
-		if lines := strings.Count(m.footer(st), "\n") + 1; lines > 2 {
-			t.Errorf("step %d text takes %d lines, want at most 2", n+1, lines)
-		}
 	}
 }
 

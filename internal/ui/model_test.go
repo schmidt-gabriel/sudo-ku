@@ -100,8 +100,8 @@ func TestMenuWithoutSave(t *testing.T) {
 	if m.mode != modeMenu {
 		t.Fatalf("mode = %v, want menu", m.mode)
 	}
-	if got := m.menuItems(); !slices.Equal(got, []menuItem{itemNewGame, itemTutorial, itemQuit}) {
-		t.Errorf("menu = %v, want New game, Tutorial, Quit", got)
+	if got := m.menuItems(); !slices.Equal(got, []menuItem{itemNewGame, itemTutorial, itemLanguage, itemQuit}) {
+		t.Errorf("menu = %v, want New game, Tutorial, Language, Quit", got)
 	}
 }
 
@@ -122,8 +122,8 @@ func TestLoadErrorShowsStatus(t *testing.T) {
 	fs := tutorialSeen()
 	fs.loadErr = errors.New("corrupt")
 	m := newModel(fs)
-	if m.status != textLoadFailed {
-		t.Errorf("status = %q, want %q", m.status, textLoadFailed)
+	if m.status != english.LoadFailed {
+		t.Errorf("status = %q, want %q", m.status, english.LoadFailed)
 	}
 	if m.menuItems()[0] == itemContinue {
 		t.Error("Continue offered without a loadable save")
@@ -283,8 +283,8 @@ func TestSaveErrorShowsStatus(t *testing.T) {
 	fs := tutorialSeen()
 	fs.saveErr = errors.New("disk full")
 	m := press(playing(fs), "4")
-	if m.status != textSaveFailed {
-		t.Fatalf("status = %q, want %q", m.status, textSaveFailed)
+	if m.status != english.SaveFailed {
+		t.Fatalf("status = %q, want %q", m.status, english.SaveFailed)
 	}
 	if m = press(m, "right"); m.status != "" {
 		t.Error("status not cleared by the next key")

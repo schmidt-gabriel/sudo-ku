@@ -38,6 +38,7 @@ const (
 	itemContinue menuItem = iota
 	itemNewGame
 	itemTutorial
+	itemLanguage
 	itemQuit
 )
 
@@ -48,6 +49,7 @@ type Model struct {
 	store    Store
 	rng      *rand.Rand
 	settings store.Settings
+	t        *texts // the player's language
 
 	mode      mode
 	game      *game.Game // the game being played, or the saved game in the menu
@@ -68,6 +70,7 @@ type Model struct {
 func New(st Store, rng *rand.Rand) Model {
 	m := Model{store: st, rng: rng, dark: true}
 	m.settings, _ = st.LoadSettings() // a broken settings file just means defaults
+	m.t = textsFor(m.settings.Language)
 	m.toMenu()
 	if !m.settings.TutorialDone {
 		m.startTutorial()
@@ -146,9 +149,9 @@ func (m Model) menuKey(key string) (Model, tea.Cmd) {
 
 func (m Model) menuItems() []menuItem {
 	if m.game != nil {
-		return []menuItem{itemContinue, itemNewGame, itemTutorial, itemQuit}
+		return []menuItem{itemContinue, itemNewGame, itemTutorial, itemLanguage, itemQuit}
 	}
-	return []menuItem{itemNewGame, itemTutorial, itemQuit}
+	return []menuItem{itemNewGame, itemTutorial, itemLanguage, itemQuit}
 }
 
 func (m Model) chooseMenu(item menuItem) (Model, tea.Cmd) {
@@ -159,6 +162,8 @@ func (m Model) chooseMenu(item menuItem) (Model, tea.Cmd) {
 		m.mode, m.menuIndex = modeDifficulty, 0
 	case itemTutorial:
 		m.startTutorial()
+	case itemLanguage:
+		m.toggleLanguage()
 	case itemQuit:
 		return m, tea.Quit
 	}
@@ -260,7 +265,7 @@ func (m *Model) afterMove() {
 	if m.game.Won() {
 		m.mode = modeWon
 		if err := m.store.DeleteGame(); err != nil {
-			m.status = textSaveFailed
+			m.status = m.t.SaveFailed
 		}
 		return
 	}
@@ -275,7 +280,7 @@ func (m *Model) newGame(d sudoku.Difficulty) {
 
 func (m *Model) save() {
 	if err := m.store.SaveGame(m.game); err != nil {
-		m.status = textSaveFailed
+		m.status = m.t.SaveFailed
 	}
 }
 
@@ -286,12 +291,24 @@ func (m *Model) quit() tea.Cmd {
 	return tea.Quit
 }
 
+// toggleLanguage switches between English and Portuguese and saves the choice.
+func (m *Model) toggleLanguage() {
+	m.settings.Language = langPortuguese
+	if m.t == &portuguese {
+		m.settings.Language = langEnglish
+	}
+	m.t = textsFor(m.settings.Language)
+	if err := m.store.SaveSettings(m.settings); err != nil {
+		m.status = m.t.SaveFailed
+	}
+}
+
 // toMenu opens the main menu, loading the saved game so it can be continued.
 func (m *Model) toMenu() {
 	m.mode, m.menuIndex, m.notesMode = modeMenu, 0, false
 	g, err := m.store.LoadGame()
 	if err != nil {
-		m.status = textLoadFailed
+		m.status = m.t.LoadFailed
 	}
 	if g != nil && g.Won() {
 		g = nil // a solved save is left over from a crash; nothing to continue

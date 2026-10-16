@@ -104,6 +104,16 @@ func TestDeleteGame(t *testing.T) {
 	}
 }
 
+func TestSettingsKeepLanguage(t *testing.T) {
+	s := newStore(t)
+	if err := s.SaveSettings(Settings{Language: "pt-BR"}); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := s.LoadSettings(); st.Language != "pt-BR" {
+		t.Errorf("Language = %q, want pt-BR", st.Language)
+	}
+}
+
 func TestSettings(t *testing.T) {
 	s := newStore(t)
 	st, err := s.LoadSettings()
