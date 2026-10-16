@@ -37,7 +37,8 @@ homebrew_casks:
     license: MIT
     # Homebrew 7 deprecates postflight blocks, which GoReleaser's hooks
     # generate, in favor of declarative postflight_steps. The step removes
-    # macOS quarantine from the unsigned binary; it is a no-op on Linux.
+    # macOS quarantine from the unsigned binary and may fail without failing
+    # the install (must_succeed: false).
     # custom_block is a GoReleaser template, hence the escaped {{staged_path}}.
     custom_block: |
       postflight_steps do
