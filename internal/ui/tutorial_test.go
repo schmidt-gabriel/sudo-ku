@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -117,5 +118,25 @@ func TestTutorialClickStarts(t *testing.T) {
 	next, _ := m.Update(tea.MouseClickMsg{X: 0, Y: 0, Button: tea.MouseLeft})
 	if got := next.(Model).tutorialStep; got != 1 {
 		t.Errorf("after a click the tutorial is at step %d, want 1", got)
+	}
+}
+
+func TestTutorialFinishesWhenSolvedEarly(t *testing.T) {
+	fs := &fakeStore{}
+	m := newModel(fs)
+	for _, i := range tutorialBlanks { // solved during the "press enter" step
+		m.cursor = i
+		m = press(m, fmt.Sprint(tutorialSolution[i]))
+	}
+	if m.mode != modeMenu || !fs.settings.TutorialDone {
+		t.Errorf("solving the board early left the tutorial at step %d (mode %v)", m.tutorialStep, m.mode)
+	}
+}
+
+func TestTutorialKeepsLoadFailure(t *testing.T) {
+	fs := &fakeStore{loadErr: errors.New("corrupt")}
+	m := press(newModel(fs), "esc")
+	if m.mode != modeMenu || m.status != english.LoadFailed {
+		t.Errorf("after skipping: mode %v status %q, want the menu with %q", m.mode, m.status, english.LoadFailed)
 	}
 }
