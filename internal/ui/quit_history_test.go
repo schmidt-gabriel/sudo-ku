@@ -131,16 +131,12 @@ func TestQuitAsksToSaveOrDiscard(t *testing.T) {
 
 func TestQuitDialogByMouseAndArrows(t *testing.T) {
 	fs := tutorialSeen()
-	m := press(playing(fs), "4")
-	m, _ = m.handleClick("btn-quit")
-	if !m.confirmQuit {
-		t.Fatal("the Quit button did not open the dialog")
-	}
+	m := press(playing(fs), "4", "q")
 	m, _ = m.handleClick("quit-2")
 	if m.confirmQuit {
 		t.Fatal("Cancel did not close the dialog")
 	}
-	m, _ = m.handleClick("btn-quit")
+	m = press(m, "q")
 	_, cmd := m.handleClick("quit-1")
 	quitCmd(t, cmd)
 	if fs.saved != nil {
@@ -167,8 +163,8 @@ func TestTimerPausedWhileConfirmingQuit(t *testing.T) {
 func TestQuitDialogAndButtonAreShown(t *testing.T) {
 	m := playing(tutorialSeen())
 	m.width, m.height = 100, 50
-	if got := ansi.Strip(m.View().Content); !strings.Contains(got, "[Quit]") {
-		t.Errorf("game screen has no Quit button:\n%s", got)
+	if got := ansi.Strip(m.View().Content); !strings.Contains(got, "[Menu]") || strings.Contains(got, "[Quit]") {
+		t.Errorf("game screen should offer [Menu] instead of [Quit]:\n%s", got)
 	}
 	m = press(m, "q")
 	got := ansi.Strip(m.View().Content)
@@ -197,5 +193,20 @@ func TestSaveButtonAndKey(t *testing.T) {
 	fs.saveErr = errSave
 	if m = press(m, "s"); m.status != english.SaveFailed {
 		t.Errorf("failed save: status %q, want %q", m.status, english.SaveFailed)
+	}
+}
+
+func TestMenuButtonSavesAndReturns(t *testing.T) {
+	fs := tutorialSeen()
+	m := press(playing(fs), "4")
+	m, _ = m.handleClick("btn-menu")
+	if m.mode != modeMenu || m.confirmQuit {
+		t.Fatalf("Menu button: mode %v, dialog %v; want the menu", m.mode, m.confirmQuit)
+	}
+	if m.menuItems()[0] != itemContinue {
+		t.Fatal("the menu should offer Continue for the game just left")
+	}
+	if m = press(m, "enter"); m.mode != modePlaying || m.game.Values[2] != 4 {
+		t.Error("Continue did not bring the game back")
 	}
 }

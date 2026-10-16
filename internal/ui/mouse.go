@@ -23,7 +23,7 @@ func (m Model) hit(msg tea.MouseClickMsg) string {
 			return firstHit(msg, listZones("quit", quitCancel+1))
 		}
 		if m.mode == modePlaying {
-			if id := firstHit(msg, []string{"btn-save", "btn-quit"}); id != "" {
+			if id := firstHit(msg, []string{"btn-save", "btn-menu"}); id != "" {
 				return id
 			}
 		}
@@ -84,8 +84,9 @@ func (m Model) handleClick(id string) (Model, tea.Cmd) {
 		case m.mode != modePlaying:
 		case arg == "save":
 			m.saveNow()
-		case arg == "quit":
-			m.confirmQuit, m.quitIndex = true, quitSave
+		case arg == "menu": // like esc: save and go back to the menu
+			m.save()
+			m.toMenu()
 		}
 	case "cell":
 		m.cursor = n
