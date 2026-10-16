@@ -8,8 +8,8 @@ import (
 
 // styles holds every color and style, picked for a light or dark terminal.
 type styles struct {
-	text, muted, accent, conflict, same, onSelected color.Color
-	peerBg, selectedBg, targetBg                    color.Color
+	text, muted, accent, conflict color.Color
+	peerBg, selectedBg, targetBg  color.Color
 
 	// frame draws the box borders; border the thin lines between cells.
 	frame, border, title, help, status, item, itemOn lipgloss.Style
@@ -19,16 +19,15 @@ func newStyles(dark bool) styles {
 	ld := lipgloss.LightDark(dark)
 	c := lipgloss.Color
 	s := styles{
-		text:     ld(c("#1f2328"), c("#e6edf3")),
-		muted:    ld(c("#8c959f"), c("#6e7681")),
-		accent:   ld(c("#0969da"), c("#58a6ff")),
-		conflict: ld(c("#cf222e"), c("#ff7b72")),
-		// Backgrounds and the same-digit color are xterm-256 palette entries,
-		// so they look the same in 256-color and true-color terminals.
-		same:       ld(c("136"), c("179")),
-		onSelected: ld(c("16"), c("231")), // black or white on the selection
-		peerBg:     ld(c("254"), c("236")),
-		selectedBg: ld(c("153"), c("25")),
+		// All board colors are xterm-256 palette entries, so they look the
+		// same in 256-color and true-color terminals. Text colors keep their
+		// meaning on every background: white clues, blue player digits.
+		text:       ld(c("235"), c("255")),
+		muted:      ld(c("245"), c("244")),
+		accent:     ld(c("25"), c("81")),
+		conflict:   ld(c("160"), c("203")),
+		peerBg:     ld(c("254"), c("237")),
+		selectedBg: ld(c("250"), c("240")),
 		targetBg:   ld(c("229"), c("58")),
 	}
 	s.frame = lipgloss.NewStyle().Bold(true).Foreground(ld(c("238"), c("250")))

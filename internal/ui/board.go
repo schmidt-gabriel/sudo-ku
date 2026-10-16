@@ -87,7 +87,7 @@ func (m Model) cellRow(st styles, row, sub int, conflicts map[int]bool) string {
 	b.WriteString(st.frame.Render("┃"))
 	for col := range 9 {
 		i := row*9 + col
-		b.WriteString(m.cellStyle(st, i, conflicts[i]).Render(m.cellLine(i, sub)))
+		b.WriteString(m.renderCell(st, i, sub, conflicts[i]))
 		if col%3 == 2 {
 			b.WriteString(st.frame.Render("┃"))
 		} else {
@@ -95,6 +95,22 @@ func (m Model) cellRow(st styles, row, sub int, conflicts map[int]bool) string {
 		}
 	}
 	return b.String()
+}
+
+// renderCell draws line sub of cell i. An underline marks only the digit,
+// never the padding around it.
+func (m Model) renderCell(st styles, i, sub int, conflict bool) string {
+	style := m.cellStyle(st, i, conflict)
+	line := m.cellLine(i, sub)
+	if !style.GetUnderline() {
+		return style.Render(line)
+	}
+	plain := style.Underline(false)
+	if sub != 0 {
+		return plain.Render(line)
+	}
+	pad := strings.Repeat(" ", (cellW-1)/2)
+	return plain.Render(pad) + style.Render(strings.TrimSpace(line)) + plain.Render(pad)
 }
 
 // cellLine returns line sub (0 or 1) of cell i, exactly cellW characters
@@ -152,23 +168,25 @@ func paint(s lipgloss.Style, bg color.Color) lipgloss.Style {
 	return s.Background(bg)
 }
 
-// cellStyle colors a cell: conflicts red, the selected cell black or white,
-// digits equal to the selected one in bold amber, givens bold, the player's
-// digits blue, notes grey.
+// cellStyle colors a cell's text: conflicts red, clues bold white, the
+// player's digits blue, notes grey. Digits equal to the selected one are
+// underlined and bold but keep their color, so the player can always tell
+// which digits they may change, on the selection too.
 func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	g, sel := m.game, m.cursor
 	s := paint(lipgloss.NewStyle(), m.cellBg(st, i))
+	if i != sel && g.Values[i] != 0 && g.Values[i] == g.Values[sel] {
+		s = s.Underline(true).Bold(true)
+	}
 	switch {
 	case conflict:
 		return s.Foreground(st.conflict).Bold(true)
-	case i == sel:
-		return s.Foreground(st.onSelected).Bold(true) // readable on the strong background
-	case g.Values[i] != 0 && g.Values[i] == g.Values[sel]:
-		return s.Foreground(st.same).Bold(true)
 	case g.IsGiven(i):
 		return s.Foreground(st.text).Bold(true)
 	case g.Values[i] != 0:
-		return s.Foreground(st.accent)
+		return s.Foreground(st.accent).Bold(s.GetBold() || i == sel)
+	case i == sel:
+		return s.Foreground(st.text) // notes stay readable on the selection
 	}
 	return s.Foreground(st.muted)
 }

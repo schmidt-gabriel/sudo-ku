@@ -221,8 +221,12 @@ func TestHighlightHierarchy(t *testing.T) {
 	if bg := m.cellBg(st, 14); bg != nil {
 		t.Errorf("same-digit cell has background %v, want none", bg)
 	}
-	if s := m.cellStyle(st, 14, false); s.GetForeground() != st.same || !s.GetBold() {
-		t.Error("same-digit cell should be bold in the same-digit color")
+	if s := m.cellStyle(st, 14, false); s.GetForeground() != st.text || !s.GetUnderline() || !s.GetBold() {
+		t.Error("a clue with the selected digit should stay white, underlined and bold")
+	}
+	m.game.Set(40, 5) // a player's 5, not a peer of cell 0
+	if s := m.cellStyle(st, 40, false); s.GetForeground() != st.accent || !s.GetUnderline() {
+		t.Error("a player's digit equal to the selected one should stay blue and be underlined")
 	}
 	if bg := m.cellBg(st, 40); bg != nil {
 		t.Errorf("unrelated cell has background %v, want none", bg)
@@ -246,30 +250,32 @@ func TestGridLinesAreNeverPainted(t *testing.T) {
 	}
 }
 
-func TestSelectedCellTextIsReadable(t *testing.T) {
+func TestSelectedCellKeepsItsColors(t *testing.T) {
 	for _, dark := range []bool{true, false} {
 		st := newStyles(dark)
 		m := playing(tutorialSeen()) // cursor on empty cell 2
-		check := func(what string) {
-			t.Helper()
-			if got := m.cellStyle(st, m.cursor, false).GetForeground(); got != st.onSelected {
-				t.Errorf("dark=%v: %s on the selected cell uses %v, want onSelected", dark, what, got)
-			}
-		}
+		fg := func() any { return m.cellStyle(st, m.cursor, false).GetForeground() }
 		m.game.ToggleNote(2, 1)
-		check("notes")
-		m.game.Set(2, 4)
-		check("a player's digit")
-		m.cursor = 0
-		check("a given")
-		if st.onSelected == st.accent {
-			t.Errorf("dark=%v: selected text must not be the player-digit blue", dark)
+		if got := fg(); got != st.text {
+			t.Errorf("dark=%v: notes on the selected cell = %v, want the main text color", dark, got)
 		}
-		if got := m.cellStyle(st, 3, false).GetForeground(); got != st.muted {
-			t.Errorf("dark=%v: notes elsewhere should stay muted", dark)
+		m.game.Set(2, 4)
+		if got := fg(); got != st.accent {
+			t.Errorf("dark=%v: a player's digit on the selected cell = %v, want blue", dark, got)
+		}
+		m.cursor = 0
+		if got := fg(); got != st.text {
+			t.Errorf("dark=%v: a given on the selected cell = %v, want the main text color", dark, got)
 		}
 		if got := m.cellStyle(st, 0, true).GetForeground(); got != st.conflict {
 			t.Errorf("dark=%v: a conflict on the selected cell should stay red", dark)
+		}
+		if st.selectedBg == st.peerBg || st.selectedBg == st.accent {
+			t.Errorf("dark=%v: the selection must differ from peers and from the player-digit blue", dark)
+		}
+		m.cursor = 2
+		if got := m.cellStyle(st, 3, false).GetForeground(); got != st.muted {
+			t.Errorf("dark=%v: notes elsewhere should stay muted", dark)
 		}
 	}
 }
@@ -306,5 +312,22 @@ func TestNoNumberPad(t *testing.T) {
 	}
 	if minHeight != boardH+4 {
 		t.Errorf("minHeight = %d, want board plus header, shortcuts and status (%d)", minHeight, boardH+4)
+	}
+}
+
+func TestUnderlineCoversOnlyTheDigit(t *testing.T) {
+	st := newStyles(true)
+	m := playing(tutorialSeen())
+	m.cursor = 0 // a clue 5; cell 14 holds another 5
+	style := m.cellStyle(st, 14, false)
+	got := m.renderCell(st, 14, 0, false)
+	if ansi.Strip(got) != m.cellLine(14, 0) {
+		t.Fatalf("renderCell text = %q, want %q", ansi.Strip(got), m.cellLine(14, 0))
+	}
+	if !strings.Contains(got, style.Render("5")) || got == style.Render(m.cellLine(14, 0)) {
+		t.Errorf("only the digit should be underlined: %q", got)
+	}
+	if line, want := m.renderCell(st, 14, 1, false), style.Underline(false).Render(m.cellLine(14, 1)); line != want {
+		t.Errorf("the empty second line should not be underlined: %q", line)
 	}
 }
