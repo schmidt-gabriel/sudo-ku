@@ -158,6 +158,7 @@ Colors come from `lipgloss.LightDark`, driven by `tea.BackgroundColorMsg`
 
 - A cell's background tells what it holds: blue for the player's digits, red for conflicts (white text on both), none for clues (bold text). The selected cell uses a lighter shade of its own color (light gray for clues and empty cells). Its row, column and box get a soft gray, except blue and red cells, which keep their color.
 - Digits equal to the selected one: underlined and bold.
+- Completed digits (`game.Completed(v)`: every cell whose solution is v holds v) turn a soft green, on clues and player cells alike; the blue background stays. Conflicts and the selected cell keep their normal colors.
 - Notes: grey (main text color on the selected cell).
 - Backgrounds and amber are xterm-256 palette colors so 256-color terminals show them unchanged.
 

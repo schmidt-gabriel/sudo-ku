@@ -105,6 +105,20 @@ func (g *Game) Redo() bool {
 // Conflicts returns the filled cells that break a rule.
 func (g *Game) Conflicts() []int { return sudoku.Conflicts(g.Values) }
 
+// Completed reports whether digit v (1-9) sits in every cell where the
+// solution has it, so all nine are in their final places.
+func (g *Game) Completed(v uint8) bool {
+	if v < 1 || v > 9 {
+		return false
+	}
+	for i, want := range g.Solution {
+		if want == v && g.Values[i] != v {
+			return false
+		}
+	}
+	return true
+}
+
 // Won reports whether the board is full and breaks no rule.
 func (g *Game) Won() bool { return sudoku.IsComplete(g.Values) }
 
