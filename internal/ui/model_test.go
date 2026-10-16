@@ -5,10 +5,12 @@ import (
 	"errors"
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/schmidt-gabriel/sudo-ku/internal/game"
 	"github.com/schmidt-gabriel/sudo-ku/internal/store"
@@ -22,12 +24,13 @@ var (
 
 // fakeStore keeps everything in memory.
 type fakeStore struct {
-	saved    *game.Game
-	history  []store.Result
-	settings store.Settings
-	loadErr  error
-	saveErr  error
-	saves    int
+	saved     *game.Game
+	history   []store.Result
+	settings  store.Settings
+	loadErr   error
+	saveErr   error
+	deleteErr error
+	saves     int
 }
 
 // LoadGame and SaveGame pass games through JSON like the real store, so
@@ -54,7 +57,13 @@ func (f *fakeStore) SaveGame(g *game.Game) error {
 	f.saved = saved
 	return nil
 }
-func (f *fakeStore) DeleteGame() error                    { f.saved = nil; return nil }
+func (f *fakeStore) DeleteGame() error {
+	if f.deleteErr != nil {
+		return f.deleteErr
+	}
+	f.saved = nil
+	return nil
+}
 func (f *fakeStore) LoadHistory() ([]store.Result, error) { return f.history, nil }
 func (f *fakeStore) AddResult(r store.Result) error {
 	f.history = append([]store.Result{r}, f.history...)
@@ -405,5 +414,35 @@ func TestWonScreenArrows(t *testing.T) {
 		if m := press(won(), k, k); m.menuIndex != 1 {
 			t.Errorf("%s twice: selected %d, want 1", k, m.menuIndex)
 		}
+	}
+}
+
+func TestMenuHelpMatchesEsc(t *testing.T) {
+	for code, tx := range languages {
+		m := newModel(tutorialSeen())
+		m.t = tx
+		menu := ansi.Strip(m.View().Content)
+		if !strings.Contains(menu, tx.MenuHelp) || strings.Contains(menu, tx.DifficultyHelp) {
+			t.Errorf("%s: main menu should show MenuHelp only:\n%s", code, menu)
+		}
+		m = press(m, "enter") // New game opens the difficulty list
+		if list := ansi.Strip(m.View().Content); !strings.Contains(list, tx.DifficultyHelp) {
+			t.Errorf("%s: difficulty list should show DifficultyHelp:\n%s", code, list)
+		}
+	}
+	if strings.Contains(english.MenuHelp, "esc") {
+		t.Errorf("main menu help mentions esc, which quits there: %q", english.MenuHelp)
+	}
+}
+
+func TestWinWithUndeletableSave(t *testing.T) {
+	fs := tutorialSeen()
+	fs.deleteErr = errors.New("read-only")
+	m := playing(fs)
+	almost := testSolution
+	almost[2] = 0
+	m.game = game.FromPuzzle(almost, testSolution, sudoku.Easy)
+	if m = press(m, "4"); m.mode != modeWon || m.status != english.DeleteFailed {
+		t.Errorf("mode %v status %q, want the win screen with %q", m.mode, m.status, english.DeleteFailed)
 	}
 }
