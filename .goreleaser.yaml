@@ -33,7 +33,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Casks
     homepage: https://github.com/schmidt-gabriel/sudo-ku
-    description: Sudoku in your terminal, playable with the mouse or the keyboard
+    description: Sudoku in your terminal with notes, undo and an interactive tutorial
     license: MIT
     hooks:
       post:

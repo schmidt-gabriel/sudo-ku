@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	cellW  = 7           // characters per cell, " 1 2 3 ", close to square
-	cellH  = 3           // lines per cell, room for three rows of notes
+	cellW  = 9           // characters per cell: notes "1 2 3 4 5"
+	cellH  = 2           // lines per cell: notes 1-5, then 6-9
 	boxW   = 3*cellW + 3 // three cells, two thin lines, one thick border
 	boxH   = 3*cellH + 3 // three cells, two thin lines, one thick border
-	boardW = 3*boxW + 1  // 73
-	boardH = 3*boxH + 1  // 37
+	boardW = 3*boxW + 1  // 91
+	boardH = 3*boxH + 1  // 28
 )
 
 // cellAt maps a position inside the board, where (0,0) is the top-left
@@ -59,24 +59,23 @@ func (m Model) renderBoard(st styles) string {
 func thickRule(st styles, left, thin, thick, right string) string {
 	seg := strings.Repeat("━", cellW)
 	box := seg + thin + seg + thin + seg
-	return st.border.Render(left + box + thick + box + thick + box + right)
+	return st.frame.Render(left + box + thick + box + thick + box + right)
 }
 
-// thinRule draws the thin line under row, painting the parts that sit
-// between two highlighted cells so highlights stay solid.
+// thinRule draws the thin line under row. Lines are never painted, so every
+// highlighted cell sits inside the same even margin.
 func (m Model) thinRule(st styles, row int) string {
 	var b strings.Builder
-	b.WriteString(st.border.Render("┠"))
+	b.WriteString(st.frame.Render("┠"))
 	for col := range 9 {
-		above, below := row*9+col, (row+1)*9+col
-		b.WriteString(paint(st.border, m.separatorBg(st, above, below)).Render(strings.Repeat("─", cellW)))
+		b.WriteString(st.border.Render(strings.Repeat("─", cellW)))
 		switch {
 		case col == 8:
-			b.WriteString(st.border.Render("┨"))
+			b.WriteString(st.frame.Render("┨"))
 		case col%3 == 2:
-			b.WriteString(st.border.Render("╂"))
+			b.WriteString(st.frame.Render("╂"))
 		default:
-			b.WriteString(paint(st.border, m.crossBg(st, above, above+1, below, below+1)).Render("┼"))
+			b.WriteString(st.border.Render("┼"))
 		}
 	}
 	return b.String()
@@ -85,37 +84,48 @@ func (m Model) thinRule(st styles, row int) string {
 // cellRow draws line sub (0-2) of one board row.
 func (m Model) cellRow(st styles, row, sub int, conflicts map[int]bool) string {
 	var b strings.Builder
-	b.WriteString(st.border.Render("┃"))
+	b.WriteString(st.frame.Render("┃"))
 	for col := range 9 {
 		i := row*9 + col
 		b.WriteString(m.cellStyle(st, i, conflicts[i]).Render(m.cellLine(i, sub)))
 		if col%3 == 2 {
-			b.WriteString(st.border.Render("┃"))
+			b.WriteString(st.frame.Render("┃"))
 		} else {
-			b.WriteString(paint(st.border, m.separatorBg(st, i, i+1)).Render("│"))
+			b.WriteString(st.border.Render("│"))
 		}
 	}
 	return b.String()
 }
 
-// cellLine returns line sub (0-2) of cell i, exactly cellW characters wide.
-// A filled cell shows its digit in the middle; an empty one shows its notes.
+// cellLine returns line sub (0 or 1) of cell i, exactly cellW characters
+// wide. A filled cell shows its digit centered on the first line. An empty
+// cell shows notes 1-5 on the first line and 6-9, shifted half a step, on
+// the second, each digit in a fixed spot.
 func (m Model) cellLine(i, sub int) string {
 	if v := m.game.Values[i]; v != 0 {
-		if sub == 1 {
-			return "   " + string(rune('0'+v)) + "   "
+		if sub == 0 {
+			pad := strings.Repeat(" ", (cellW-1)/2)
+			return pad + string(rune('0'+v)) + pad
 		}
 		return strings.Repeat(" ", cellW)
 	}
-	notes := make([]string, 3)
-	for k := range notes {
-		d := uint8(sub*3 + k + 1)
-		notes[k] = " "
-		if m.game.HasNote(i, d) {
-			notes[k] = string(rune('0' + d))
-		}
+	first, last := uint8(1), uint8(5)
+	if sub == 1 {
+		first, last = 6, 9
 	}
-	return " " + strings.Join(notes, " ") + " "
+	var notes []string
+	for d := first; d <= last; d++ {
+		n := " "
+		if m.game.HasNote(i, d) {
+			n = string(rune('0' + d))
+		}
+		notes = append(notes, n)
+	}
+	line := strings.Join(notes, " ")
+	if sub == 1 {
+		line = " " + line + " "
+	}
+	return line
 }
 
 // cellBg is the background of cell i: strong for the selected cell, yellow
@@ -132,25 +142,6 @@ func (m Model) cellBg(st styles, i int) color.Color {
 		return st.peerBg
 	}
 	return nil
-}
-
-// separatorBg paints the line between two neighboring cells when both are
-// highlighted, so a highlighted row, column or box reads as one block.
-func (m Model) separatorBg(st styles, a, b int) color.Color {
-	if m.cellBg(st, a) != nil && m.cellBg(st, b) != nil {
-		return st.peerBg
-	}
-	return nil
-}
-
-// crossBg paints a line crossing when all four cells around it are highlighted.
-func (m Model) crossBg(st styles, cells ...int) color.Color {
-	for _, i := range cells {
-		if m.cellBg(st, i) == nil {
-			return nil
-		}
-	}
-	return st.peerBg
 }
 
 // paint returns s with background bg, or s unchanged when bg is nil.

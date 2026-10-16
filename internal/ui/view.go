@@ -15,7 +15,7 @@ import (
 // and a status line.
 const (
 	minWidth  = boardW
-	minHeight = boardH + 5
+	minHeight = boardH + 4
 )
 
 func (m Model) View() tea.View {
@@ -88,7 +88,6 @@ func (m Model) renderGame(st styles) string {
 	return strings.Join([]string{
 		m.header(st),
 		zone.Mark("board", m.renderBoard(st)),
-		m.renderPad(st),
 		m.footer(st),
 		st.status.Render(m.status),
 	}, "\n")
@@ -115,23 +114,6 @@ func (m Model) footer(st styles) string {
 		return st.item.Width(minWidth).Render(text)
 	}
 	return st.help.Render(m.t.GameHelp)
-}
-
-func (m Model) renderPad(st styles) string {
-	var parts []string
-	for d := 1; d <= 9; d++ {
-		parts = append(parts, zone.Mark(fmt.Sprintf("num-%d", d), st.item.Render(fmt.Sprintf("[%d]", d))))
-	}
-	notes := st.item
-	if m.notesMode {
-		notes = st.itemOn
-	}
-	parts = append(parts,
-		zone.Mark("btn-erase", st.item.Render("["+m.t.Erase+"]")),
-		zone.Mark("btn-notes", notes.Render("["+m.t.Notes+"]")),
-		zone.Mark("btn-undo", st.item.Render("["+m.t.Undo+"]")),
-	)
-	return strings.Join(parts, " ")
 }
 
 func (m Model) renderWon(st styles) string {

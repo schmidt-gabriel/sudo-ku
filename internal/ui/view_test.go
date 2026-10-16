@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/schmidt-gabriel/sudo-ku/internal/game"
 	"github.com/schmidt-gabriel/sudo-ku/internal/sudoku"
@@ -19,19 +20,19 @@ func TestCellAt(t *testing.T) {
 		ok   bool
 	}{
 		{1, 1, 0, true},   // top-left cell
-		{7, 3, 0, true},   // bottom-right character of cell 0
-		{9, 1, 1, true},   // after the thin separator
-		{25, 1, 3, true},  // first cell of the second box
-		{1, 5, 9, true},   // second row, below a thin line
-		{1, 13, 27, true}, // first row of the second band
-		{71, 35, 80, true},
-		{1, 4, 0, false},  // thin line between rows
+		{9, 2, 0, true},   // bottom-right character of cell 0
+		{11, 1, 1, true},  // after the thin vertical line
+		{31, 1, 3, true},  // first cell of the second box
+		{1, 4, 9, true},   // second row, below a thin line
+		{1, 10, 27, true}, // first row of the second band
+		{89, 26, 80, true},
 		{0, 1, 0, false},  // left border
-		{8, 1, 0, false},  // thin separator
-		{24, 1, 0, false}, // thick border between boxes
-		{1, 12, 0, false}, // thick border between bands
-		{72, 1, 0, false}, // right border
-		{1, 36, 0, false}, // bottom border
+		{10, 1, 0, false}, // thin vertical line
+		{30, 1, 0, false}, // thick border between boxes
+		{1, 3, 0, false},  // thin line between rows
+		{1, 9, 0, false},  // thick border between bands
+		{90, 1, 0, false}, // right border
+		{1, 27, 0, false}, // bottom border
 		{-1, -1, 0, false},
 	}
 	for _, c := range cases {
@@ -115,23 +116,7 @@ func TestClicks(t *testing.T) {
 	if m.cursor != 3 {
 		t.Fatalf("cursor = %d, want 3", m.cursor)
 	}
-	click("num-6")
-	if m.game.Values[3] != 6 {
-		t.Fatal("number pad did not place 6")
-	}
-	click("btn-erase")
-	if m.game.Values[3] != 0 {
-		t.Fatal("erase button did not erase")
-	}
-	click("btn-undo")
-	if m.game.Values[3] != 6 {
-		t.Fatal("undo button did not undo")
-	}
-	click("btn-notes")
-	if !m.notesMode {
-		t.Fatal("notes button did not toggle notes mode")
-	}
-
+	m = press(m, "6")
 	m.toMenu()
 	click("menu-0") // Continue
 	if m.mode != modePlaying {
@@ -159,14 +144,19 @@ func TestNotesRenderInCell(t *testing.T) {
 	m.game = game.FromPuzzle(testPuzzle, testSolution, sudoku.Easy)
 	m.game.ToggleNote(2, 1)
 	m.game.ToggleNote(2, 9)
-	if got := m.cellLine(2, 0); got != " 1     " {
-		t.Errorf("notes line 0 = %q, want %q", got, " 1     ")
+	if got := m.cellLine(2, 0); got != "1        " {
+		t.Errorf("notes line 0 = %q, want %q", got, "1        ")
 	}
-	if got := m.cellLine(2, 2); got != "     9 " {
-		t.Errorf("notes line 2 = %q, want %q", got, "     9 ")
+	if got := m.cellLine(2, 1); got != "       9 " {
+		t.Errorf("notes line 1 = %q, want %q", got, "       9 ")
 	}
-	if got := m.cellLine(0, 1); got != "   5   " {
-		t.Errorf("value line = %q, want %q", got, "   5   ")
+	m.game.ToggleNote(3, 5)
+	m.game.ToggleNote(3, 6)
+	if got := m.cellLine(3, 0) + "|" + m.cellLine(3, 1); got != "        5| 6       " {
+		t.Errorf("notes 5 and 6 = %q, want %q", got, "        5| 6       ")
+	}
+	if got := m.cellLine(0, 0) + "|" + m.cellLine(0, 1); got != "    5    |         " {
+		t.Errorf("value lines = %q, want %q", got, "    5    |         ")
 	}
 }
 
@@ -175,7 +165,10 @@ func TestTooSmallFreezesTheGame(t *testing.T) {
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = next.(Model)
 	m = press(m, "4", "x", "u")
-	m, _ = m.handleClick("num-7")
+	m, _ = m.handleClick("cell-3")
+	if m.cursor != 2 {
+		t.Errorf("a click on the hidden board moved the cursor to %d", m.cursor)
+	}
 	next, _ = m.Update(tickMsg{})
 	m = next.(Model)
 	if m.game.Values[2] != 0 || m.game.Elapsed != 0 {
@@ -200,8 +193,11 @@ func TestClickAnywhereClosesHelp(t *testing.T) {
 }
 
 func TestBoardGeometry(t *testing.T) {
-	if cellW != 7 || cellH != 3 || boardW != 73 || boardH != 37 {
-		t.Errorf("cells %dx%d board %dx%d, want 7x3 and 73x37", cellW, cellH, boardW, boardH)
+	if cellW != 9 || cellH != 2 || boardW != 91 || boardH != 28 {
+		t.Errorf("cells %dx%d board %dx%d, want 9x2 and 91x28", cellW, cellH, boardW, boardH)
+	}
+	if minWidth > 91 || minHeight > 33 {
+		t.Errorf("minimum terminal %dx%d, want it to fit 91x33", minWidth, minHeight)
 	}
 	if minWidth < boardW {
 		t.Errorf("minWidth %d is narrower than the board (%d)", minWidth, boardW)
@@ -233,30 +229,20 @@ func TestHighlightHierarchy(t *testing.T) {
 	}
 }
 
-func TestSeparatorsJoinHighlights(t *testing.T) {
+func TestGridLinesAreNeverPainted(t *testing.T) {
 	st := newStyles(true)
 	m := playing(tutorialSeen())
-	m.cursor = 0
-	if bg := m.separatorBg(st, 0, 1); bg != st.peerBg {
-		t.Errorf("separator inside the selected row = %v, want peerBg", bg)
+	m.cursor = 10 // highlights row 1, column 1 and box 0, which touch many lines
+	for row := range 8 {
+		if line := m.thinRule(st, row); strings.Contains(line, "48;") {
+			t.Errorf("thin line under row %d has a background: %q", row, line)
+		}
 	}
-	if bg := m.separatorBg(st, 9, 10); bg != st.peerBg {
-		t.Errorf("separator inside the selected box = %v, want peerBg", bg)
-	}
-	if bg := m.separatorBg(st, 0, 9); bg != st.peerBg {
-		t.Errorf("line between two cells of the selected column = %v, want peerBg", bg)
-	}
-	if bg := m.crossBg(st, 0, 1, 9, 10); bg != st.peerBg {
-		t.Errorf("crossing inside the selected box = %v, want peerBg", bg)
-	}
-	if bg := m.crossBg(st, 36, 37, 45, 46); bg != nil {
-		t.Errorf("crossing next to plain cells = %v, want none", bg)
-	}
-	if bg := m.separatorBg(st, 36, 37); bg != nil {
-		t.Errorf("separator between a highlighted and a plain cell = %v, want none", bg)
-	}
-	if bg := m.separatorBg(st, 12, 13); bg != nil {
-		t.Errorf("separator outside every highlight = %v, want none", bg)
+	thin := st.border.Render("│")
+	for row := range 9 {
+		if n := strings.Count(m.cellRow(st, row, 0, nil), thin); n != 6 {
+			t.Errorf("row %d has %d plain thin separators, want 6", row, n)
+		}
 	}
 }
 
@@ -268,5 +254,40 @@ func TestNotesReadableOnSelectedCell(t *testing.T) {
 	}
 	if s := m.cellStyle(st, 3, false); s.GetForeground() != st.muted {
 		t.Error("notes elsewhere should stay muted")
+	}
+}
+
+func TestBoxBordersStandOut(t *testing.T) {
+	for _, dark := range []bool{true, false} {
+		st := newStyles(dark)
+		if st.frame.GetForeground() == st.border.GetForeground() {
+			t.Errorf("dark=%v: box borders use the same color as the thin lines", dark)
+		}
+		if !st.frame.GetBold() {
+			t.Errorf("dark=%v: box borders should be bold", dark)
+		}
+	}
+	m := playing(tutorialSeen())
+	st := newStyles(true)
+	if got := thickRule(st, "┏", "┯", "┳", "┓"); got != st.frame.Render(ansi.Strip(got)) {
+		t.Error("thick rules are not drawn with the frame style")
+	}
+	if row := m.cellRow(st, 0, 0, nil); !strings.HasPrefix(row, st.frame.Render("┃")) {
+		t.Error("the left box border is not drawn with the frame style")
+	}
+}
+
+func TestNoNumberPad(t *testing.T) {
+	m := playing(tutorialSeen())
+	m.width, m.height = 100, 50
+	for _, tx := range languages {
+		m.t = tx
+		got := ansi.Strip(m.View().Content)
+		if strings.Contains(got, "[1]") || strings.Contains(got, "[9]") {
+			t.Errorf("game screen still shows a number pad:\n%s", got)
+		}
+	}
+	if minHeight != boardH+4 {
+		t.Errorf("minHeight = %d, want board plus header, shortcuts and status (%d)", minHeight, boardH+4)
 	}
 }

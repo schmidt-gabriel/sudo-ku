@@ -1,6 +1,6 @@
 # sudo-ku
 
-Sudoku in your terminal. Play with the mouse or the keyboard, take notes,
+Sudoku in your terminal. Play with the keyboard (click to pick a cell), take notes,
 undo anything, and pick up where you left off.
 
 ![sudo-ku demo](demo.gif)
@@ -30,17 +30,17 @@ sudo-ku
 The first run opens a short interactive tutorial. You can replay it from the menu.
 The game starts in English; pick **Language** in the menu to switch to
 Brazilian Portuguese (and back). The choice is remembered.
-The terminal needs to be at least 73 columns by 42 rows.
+The terminal needs to be at least 91 columns by 32 rows.
 
-| Action | Keyboard | Mouse |
-|---|---|---|
-| Select a cell | arrows or `hjkl` | click the cell |
-| Place a digit | `1`-`9` | click `[1]`-`[9]` |
-| Erase | `0`, `x`, Backspace | click `[Erase]` |
-| Notes mode | `n` | click `[Notes]` |
-| Undo / redo | `u` / `ctrl+r` | click `[Undo]` |
-| Help | `?` | |
-| Menu / quit | `esc` / `q` | |
+| Action | Keys |
+|---|---|
+| Select a cell | arrows, `hjkl`, or click the cell |
+| Place a digit | `1`-`9` |
+| Erase | `0`, `x`, Backspace |
+| Notes mode | `n` |
+| Undo / redo | `u` / `ctrl+r` |
+| Help | `?` |
+| Menu / quit | `esc` / `q` |
 
 Placing a digit removes it from the notes in the same row, column and box.
 Repeated digits turn red. Your game is saved after every move in

@@ -13,14 +13,6 @@ import (
 
 func init() { zone.NewGlobal() }
 
-var padZones = func() []string {
-	ids := []string{"btn-erase", "btn-notes", "btn-undo"}
-	for d := 1; d <= 9; d++ {
-		ids = append(ids, fmt.Sprintf("num-%d", d))
-	}
-	return ids
-}()
-
 // hit returns the zone ID under a click, or "" if none. Board clicks become
 // "cell-<i>". Only zones drawn in the current mode are checked, so zones
 // left over from a previous screen never match.
@@ -31,9 +23,8 @@ func (m Model) hit(msg tea.MouseClickMsg) string {
 			if i, ok := cellAt(z.Pos(msg)); ok {
 				return fmt.Sprintf("cell-%d", i)
 			}
-			return ""
 		}
-		return firstHit(msg, padZones)
+		return ""
 	case modeMenu:
 		return firstHit(msg, listZones("menu", len(m.menuItems())))
 	case modeDifficulty:
@@ -77,17 +68,6 @@ func (m Model) handleClick(id string) (Model, tea.Cmd) {
 	switch name {
 	case "cell":
 		m.cursor = n
-	case "num":
-		m.input(uint8(n))
-	case "btn":
-		switch arg {
-		case "erase":
-			m.erase()
-		case "notes":
-			m.notesMode = !m.notesMode
-		case "undo":
-			m.undo()
-		}
 	case "menu":
 		if items := m.menuItems(); n < len(items) {
 			m.menuIndex = n

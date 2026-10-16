@@ -70,7 +70,7 @@ func TestTutorialWalkthrough(t *testing.T) {
 			continue
 		}
 		click(fmt.Sprintf("cell-%d", i))
-		click(fmt.Sprintf("num-%d", tutorialSolution[i]))
+		m = press(m, fmt.Sprint(tutorialSolution[i]))
 	}
 	if m.mode != modeMenu || m.status != english.TutorialDone {
 		t.Fatalf("mode %v status %q, want the menu with %q", m.mode, m.status, english.TutorialDone)

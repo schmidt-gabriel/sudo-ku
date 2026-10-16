@@ -47,7 +47,6 @@ func TestTextsFitTheMinimumWidth(t *testing.T) {
 				}
 			}
 		}
-		check("number pad", m.renderPad(st))
 		check("shortcut line", m.footer(st))
 		check("header", m.header(st))
 		for _, line := range tx.Help {

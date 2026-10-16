@@ -11,7 +11,8 @@ type styles struct {
 	text, muted, accent, conflict, same color.Color
 	peerBg, selectedBg, targetBg        color.Color
 
-	border, title, help, status, item, itemOn lipgloss.Style
+	// frame draws the box borders; border the thin lines between cells.
+	frame, border, title, help, status, item, itemOn lipgloss.Style
 }
 
 func newStyles(dark bool) styles {
@@ -29,7 +30,8 @@ func newStyles(dark bool) styles {
 		selectedBg: ld(c("153"), c("25")),
 		targetBg:   ld(c("229"), c("58")),
 	}
-	s.border = lipgloss.NewStyle().Foreground(s.muted)
+	s.frame = lipgloss.NewStyle().Bold(true).Foreground(ld(c("238"), c("250")))
+	s.border = lipgloss.NewStyle().Foreground(ld(c("250"), c("238")))
 	s.title = lipgloss.NewStyle().Bold(true).Foreground(s.accent)
 	s.help = lipgloss.NewStyle().Foreground(s.muted)
 	s.status = lipgloss.NewStyle().Bold(true).Foreground(s.accent)

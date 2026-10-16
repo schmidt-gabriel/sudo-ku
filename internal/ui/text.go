@@ -11,7 +11,6 @@ type texts struct {
 	MenuHelp, GameHelp, WonHelp string
 	ModeLabel, ModeValue        string
 	ModeNotes                   string
-	Erase, Notes, Undo          string
 
 	Won        string
 	WonDetail  string // difficulty, time
@@ -61,9 +60,6 @@ var english = texts{
 	ModeLabel: " · Mode: ",
 	ModeValue: "Value",
 	ModeNotes: "Notes",
-	Erase:     "Erase",
-	Notes:     "Notes",
-	Undo:      "Undo",
 
 	Won:        "Solved!",
 	WonDetail:  "%s puzzle in %s",
@@ -76,8 +72,8 @@ var english = texts{
 	TutorialSteps: [6]string{
 		"Fill every row, column and 3×3 box with 1-9, each digit once. Press enter or click to start.",
 		"Move to the yellow cell with the arrow keys (or hjkl), or just click it.",
-		"Its row already has 1-4 and 6-9, so only 5 fits. Type 5 or click [5] below.",
-		"Not sure about a cell? Press n (or click [Notes]) and add two notes to another empty cell.",
+		"Its row already has 1-4 and 6-9, so only 5 fits. Type 5.",
+		"Not sure about a cell? Press n and add two notes to another empty cell.",
 		"Press n to leave notes mode, type a digit already in that row to see it turn red, then press u.",
 		"Now fill in the remaining cells. Press ? anytime for help.",
 	},
@@ -88,7 +84,7 @@ var english = texts{
 		"using each digit once per row, column and box.",
 		"",
 		"←↑↓→ hjkl or click    select a cell",
-		"1-9 or click [n]      place a digit (a note in notes mode)",
+		"1-9                   place a digit (a note in notes mode)",
 		"0 x backspace         erase",
 		"n                     toggle notes mode",
 		"u ctrl+z / ctrl+r     undo / redo",
@@ -116,9 +112,6 @@ var portuguese = texts{
 	ModeLabel: " · Modo: ",
 	ModeValue: "Valor",
 	ModeNotes: "Notas",
-	Erase:     "Apagar",
-	Notes:     "Notas",
-	Undo:      "Desf.",
 
 	Won:        "Resolvido!",
 	WonDetail:  "Nível %s resolvido em %s",
@@ -131,8 +124,8 @@ var portuguese = texts{
 	TutorialSteps: [6]string{
 		"Preencha cada linha, coluna e caixa 3×3 com 1 a 9, sem repetir. Aperte enter ou clique para começar.",
 		"Vá até a casa amarela com as setas (ou hjkl), ou clique nela.",
-		"A linha já tem 1-4 e 6-9, então só cabe o 5. Digite 5 ou clique em [5] abaixo.",
-		"Na dúvida? Aperte n (ou clique em [Notas]) e anote dois números em outra casa vazia.",
+		"A linha já tem 1-4 e 6-9, então só cabe o 5. Digite 5.",
+		"Na dúvida? Aperte n e anote dois números em outra casa vazia.",
 		"Aperte n para sair das notas, digite um número que já está na linha para vê-lo em vermelho e aperte u.",
 		"Agora preencha as casas que faltam. Aperte ? para ver a ajuda a qualquer hora.",
 	},
@@ -143,7 +136,7 @@ var portuguese = texts{
 		"a 9, sem repetir nenhum dígito na linha, coluna ou caixa.",
 		"",
 		"←↑↓→ hjkl ou clique   selecionar uma casa",
-		"1-9 ou clique [n]     colocar um dígito (nota no modo notas)",
+		"1-9                   colocar um dígito (nota no modo notas)",
 		"0 x backspace         apagar",
 		"n                     ligar ou desligar o modo notas",
 		"u ctrl+z / ctrl+r     desfazer / refazer",
