@@ -52,6 +52,7 @@ func (m Model) renderMenu(st styles) string {
 	labels := map[menuItem]string{
 		itemContinue: textContinue,
 		itemNewGame:  textNewGame,
+		itemTutorial: textTutorial,
 		itemQuit:     textQuit,
 	}
 	var opts []string
@@ -87,6 +88,9 @@ func (m Model) renderGame(st styles) string {
 }
 
 func (m Model) header(st styles) string {
+	if m.mode == modeTutorial {
+		return st.title.Render(textTutorial) + st.help.Render(textTutorialSkip)
+	}
 	modeName := textModeValue
 	if m.notesMode {
 		modeName = textModeNotes
@@ -96,7 +100,15 @@ func (m Model) header(st styles) string {
 		st.item.Render(modeName)
 }
 
-func (m Model) footer(st styles) string { return st.help.Render(textGameHelp) }
+// footer shows the shortcuts, or in the tutorial the current step wrapped
+// to at most two lines.
+func (m Model) footer(st styles) string {
+	if m.mode == modeTutorial {
+		text := fmt.Sprintf("(%d/%d) %s", m.tutorialStep+1, len(tutorialSteps), tutorialSteps[m.tutorialStep].text)
+		return st.item.Width(minWidth).Render(text)
+	}
+	return st.help.Render(textGameHelp)
+}
 
 func (m Model) renderPad(st styles) string {
 	var parts []string

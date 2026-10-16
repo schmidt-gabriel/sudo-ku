@@ -90,6 +90,8 @@ func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	switch {
 	case i == sel:
 		s = s.Background(st.selectedBg)
+	case m.mode == modeTutorial && m.tutorialStep <= 2 && i == tutorialTarget:
+		s = s.Background(st.targetBg)
 	case g.Values[sel] != 0 && g.Values[i] == g.Values[sel]:
 		s = s.Background(st.sameBg)
 	case sudoku.Row(i) == sudoku.Row(sel) || sudoku.Col(i) == sudoku.Col(sel) || sudoku.Box(i) == sudoku.Box(sel):

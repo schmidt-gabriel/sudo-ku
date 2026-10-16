@@ -99,5 +99,6 @@ func (m Model) handleClick(id string) (Model, tea.Cmd) {
 			m.toMenu()
 		}
 	}
+	m.advanceTutorial()
 	return m, nil
 }

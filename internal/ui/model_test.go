@@ -100,8 +100,8 @@ func TestMenuWithoutSave(t *testing.T) {
 	if m.mode != modeMenu {
 		t.Fatalf("mode = %v, want menu", m.mode)
 	}
-	if got := m.menuItems(); !slices.Equal(got, []menuItem{itemNewGame, itemQuit}) {
-		t.Errorf("menu = %v, want New game, Quit", got)
+	if got := m.menuItems(); !slices.Equal(got, []menuItem{itemNewGame, itemTutorial, itemQuit}) {
+		t.Errorf("menu = %v, want New game, Tutorial, Quit", got)
 	}
 }
 

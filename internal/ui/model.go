@@ -37,6 +37,7 @@ type menuItem int
 const (
 	itemContinue menuItem = iota
 	itemNewGame
+	itemTutorial
 	itemQuit
 )
 
@@ -56,6 +57,9 @@ type Model struct {
 	menuIndex int
 	status    string // one-line message under the board or menu
 
+	tutorialStep int  // index into tutorialSteps
+	sawConflict  bool // the tutorial's conflict step saw a conflict
+
 	width, height int
 	dark          bool
 }
@@ -65,6 +69,9 @@ func New(st Store, rng *rand.Rand) Model {
 	m := Model{store: st, rng: rng, dark: true}
 	m.settings, _ = st.LoadSettings() // a broken settings file just means defaults
 	m.toMenu()
+	if !m.settings.TutorialDone {
+		m.startTutorial()
+	}
 	return m
 }
 
@@ -138,9 +145,9 @@ func (m Model) menuKey(key string) (Model, tea.Cmd) {
 
 func (m Model) menuItems() []menuItem {
 	if m.game != nil {
-		return []menuItem{itemContinue, itemNewGame, itemQuit}
+		return []menuItem{itemContinue, itemNewGame, itemTutorial, itemQuit}
 	}
-	return []menuItem{itemNewGame, itemQuit}
+	return []menuItem{itemNewGame, itemTutorial, itemQuit}
 }
 
 func (m Model) chooseMenu(item menuItem) (Model, tea.Cmd) {
@@ -149,6 +156,8 @@ func (m Model) chooseMenu(item menuItem) (Model, tea.Cmd) {
 		m.mode, m.notesMode = modePlaying, false
 	case itemNewGame:
 		m.mode, m.menuIndex = modeDifficulty, 0
+	case itemTutorial:
+		m.startTutorial()
 	case itemQuit:
 		return m, tea.Quit
 	}
@@ -193,12 +202,21 @@ func (m Model) boardKey(key string) (Model, tea.Cmd) {
 		m.redo()
 	case "?":
 		m.showHelp = true
+	case "enter":
+		if m.mode == modeTutorial && tutorialSteps[m.tutorialStep].done == nil {
+			m.tutorialStep++
+		}
 	case "esc":
+		if m.mode == modeTutorial {
+			m.finishTutorial("")
+			return m, nil
+		}
 		m.save()
 		m.toMenu()
 	case "q":
 		return m, m.quit()
 	}
+	m.advanceTutorial()
 	return m, nil
 }
 
