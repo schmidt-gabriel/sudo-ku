@@ -33,14 +33,16 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Casks
     homepage: https://github.com/schmidt-gabriel/sudo-ku
-    description: Sudoku in your terminal with notes, undo and an interactive tutorial
+    description: Terminal sudoku with notes, undo and an interactive tutorial
     license: MIT
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/sudo-ku"]
-          end
+    # Homebrew 7 deprecates postflight blocks, which GoReleaser's hooks
+    # generate, in favor of declarative postflight_steps. The step removes
+    # macOS quarantine from the unsigned binary; it is a no-op on Linux.
+    # custom_block is a GoReleaser template, hence the escaped {{staged_path}}.
+    custom_block: |
+      postflight_steps do
+        run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/sudo-ku"], must_succeed: false
+      end
 
 changelog:
   sort: asc
