@@ -1,8 +1,6 @@
 package store
 
 import (
-	"errors"
-	"io/fs"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -65,8 +63,8 @@ func TestGameRoundTrip(t *testing.T) {
 	if got == nil || got.Values != g.Values || got.Givens != g.Givens {
 		t.Fatal("loaded game differs from the saved one")
 	}
-	if _, err := os.Stat(filepath.Join(s.Dir(), saveFile+".tmp")); !errors.Is(err, fs.ErrNotExist) {
-		t.Error("temporary file left behind")
+	if tmp, _ := filepath.Glob(filepath.Join(s.Dir(), "*.tmp")); len(tmp) != 0 {
+		t.Errorf("temporary files left behind: %v", tmp)
 	}
 }
 
@@ -132,5 +130,25 @@ func TestSettings(t *testing.T) {
 	st, err = s.LoadSettings()
 	if err == nil || st.TutorialDone {
 		t.Errorf("corrupt settings: %+v, %v; want defaults and an error", st, err)
+	}
+}
+
+func TestFailedWriteLeavesNoTempFile(t *testing.T) {
+	s := newStore(t)
+	// A directory where the save should go makes the final rename fail.
+	if err := os.MkdirAll(filepath.Join(s.Dir(), saveFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveGame(game.New(sudoku.Easy, rand.New(rand.NewPCG(1, 1)))); err == nil {
+		t.Fatal("SaveGame succeeded over a directory")
+	}
+	entries, err := os.ReadDir(s.Dir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() != saveFile {
+			t.Errorf("left behind %q", e.Name())
+		}
 	}
 }
