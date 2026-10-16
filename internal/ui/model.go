@@ -284,9 +284,20 @@ func (m Model) chooseQuit(choice int) (Model, tea.Cmd) {
 	return m, nil
 }
 
+// wonKey handles the win screen: menuIndex 0 is New game, 1 is Menu.
 func (m Model) wonKey(key string) (Model, tea.Cmd) {
 	switch key {
-	case "enter", "n":
+	case "left", "up", "h", "k":
+		m.menuIndex = 0
+	case "right", "down", "l", "j":
+		m.menuIndex = 1
+	case "enter":
+		if m.menuIndex == 1 {
+			m.toMenu()
+		} else {
+			m.mode, m.menuIndex = modeDifficulty, 0
+		}
+	case "n":
 		m.mode, m.menuIndex = modeDifficulty, 0
 	case "esc", "m":
 		m.toMenu()
@@ -321,7 +332,7 @@ func (m *Model) afterMove() {
 		return
 	}
 	if m.game.Won() {
-		m.mode = modeWon
+		m.mode, m.menuIndex = modeWon, 0
 		result := store.Result{Difficulty: m.game.Difficulty, Elapsed: m.game.Elapsed, FinishedAt: m.now()}
 		if err := m.store.AddResult(result); err != nil {
 			m.status = m.t.SaveFailed

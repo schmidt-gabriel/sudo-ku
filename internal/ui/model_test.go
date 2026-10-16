@@ -344,3 +344,31 @@ func TestTimerRunsOnlyWhilePlaying(t *testing.T) {
 		t.Errorf("timer ran outside play: %v", m.game.Elapsed)
 	}
 }
+
+func TestWonScreenArrows(t *testing.T) {
+	won := func() Model {
+		m := playing(tutorialSeen())
+		m.mode, m.menuIndex = modeWon, 0
+		return m
+	}
+	if m := press(won(), "enter"); m.mode != modeDifficulty {
+		t.Errorf("enter on New game: mode %v, want difficulty", m.mode)
+	}
+	m := press(won(), "right")
+	if m.menuIndex != 1 {
+		t.Fatalf("right: selected %d, want 1 (Menu)", m.menuIndex)
+	}
+	if m = press(m, "enter"); m.mode != modeMenu {
+		t.Errorf("enter on Menu: mode %v, want menu", m.mode)
+	}
+	for _, k := range []string{"left", "up", "h", "k"} {
+		if m := press(won(), "right", k); m.menuIndex != 0 {
+			t.Errorf("%s: selected %d, want 0", k, m.menuIndex)
+		}
+	}
+	for _, k := range []string{"down", "l", "j"} {
+		if m := press(won(), k, k); m.menuIndex != 1 {
+			t.Errorf("%s twice: selected %d, want 1", k, m.menuIndex)
+		}
+	}
+}

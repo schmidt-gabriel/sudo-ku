@@ -151,12 +151,20 @@ func (m Model) renderWon(st styles) string {
 		"",
 		fmt.Sprintf(m.t.WonDetail, m.difficultyName(), formatDuration(m.game.Elapsed)),
 		"",
-		zone.Mark("won-new", st.itemOn.Render("["+m.t.NewGame+"]")) + "  " +
-			zone.Mark("won-menu", st.item.Render("["+m.t.Menu+"]")),
+		zone.Mark("won-new", m.button(st, m.t.NewGame, m.menuIndex == 0)) + "  " +
+			zone.Mark("won-menu", m.button(st, m.t.Menu, m.menuIndex == 1)),
 		"",
 		st.help.Render(m.t.WonHelp),
 		st.status.Render(m.status),
 	}, "\n")
+}
+
+// button draws a bracketed button, highlighted when selected.
+func (m Model) button(st styles, label string, selected bool) string {
+	if selected {
+		return st.itemOn.Render("> [" + label + "]")
+	}
+	return st.item.Render("  [" + label + "]")
 }
 
 // difficultyName names the current game's difficulty in the player's language.

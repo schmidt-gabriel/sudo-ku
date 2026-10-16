@@ -65,7 +65,7 @@ var english = texts{
 
 	MenuHelp:  "↑↓ move · enter select · esc back · q quit",
 	GameHelp:  "←↑↓→ move · 1-9 place · n notes · u undo · s save · ? help · esc menu · q quit",
-	WonHelp:   "enter new game · esc menu · q quit",
+	WonHelp:   "←→ choose · enter select · esc menu · q quit",
 	ModeLabel: " · Mode: ",
 	ModeValue: "Value",
 	ModeNotes: "Notes",
@@ -129,7 +129,7 @@ var portuguese = texts{
 
 	MenuHelp:  "↑↓ mover · enter escolher · esc voltar · q sair",
 	GameHelp:  "←↑↓→ mover · 1-9 colocar · n notas · u desfazer · s salvar · ? ajuda · q sair",
-	WonHelp:   "enter novo jogo · esc menu · q sair",
+	WonHelp:   "←→ escolher · enter confirmar · esc menu · q sair",
 	ModeLabel: " · Modo: ",
 	ModeValue: "Valor",
 	ModeNotes: "Notas",
