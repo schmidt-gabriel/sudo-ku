@@ -63,6 +63,11 @@ func (m *Model) advanceTutorial() {
 	if m.mode != modeTutorial {
 		return
 	}
+	if m.game.Won() {
+		// Solved ahead of the steps: later steps need empty cells, so stop here.
+		m.finishTutorial(m.t.TutorialDone)
+		return
+	}
 	for m.tutorialStep < len(tutorialSteps) {
 		done := tutorialSteps[m.tutorialStep].done
 		if done == nil || !done(m) {
@@ -73,12 +78,15 @@ func (m *Model) advanceTutorial() {
 	m.finishTutorial(m.t.TutorialDone)
 }
 
-// finishTutorial records that the tutorial was seen and opens the menu.
+// finishTutorial records that the tutorial was seen and opens the menu with
+// status, unless opening the menu reported a problem of its own.
 func (m *Model) finishTutorial(status string) {
 	m.settings.TutorialDone = true
 	if err := m.store.SaveSettings(m.settings); err != nil {
 		status = m.t.SaveFailed
 	}
 	m.toMenu()
-	m.status = status
+	if m.status == "" {
+		m.status = status
+	}
 }

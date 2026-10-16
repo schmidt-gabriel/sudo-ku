@@ -111,15 +111,36 @@ func (s *Store) read(name string) ([]byte, error) {
 	return b, err
 }
 
-// write replaces a file atomically, so a crash mid-write keeps the old file.
-func (s *Store) write(name string, b []byte) error {
+// write replaces a file atomically: the data goes to a temporary file in the
+// same directory, is synced to disk, and only then renamed over the old file,
+// so a crash or power loss keeps either the old or the new contents. The
+// temporary file is removed if any step fails.
+func (s *Store) write(name string, b []byte) (err error) {
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
 		return err
 	}
-	path := filepath.Join(s.dir, name)
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+	f, err := os.CreateTemp(s.dir, name+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	defer func() {
+		if err != nil {
+			os.Remove(f.Name())
+		}
+	}()
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(f.Name(), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), filepath.Join(s.dir, name))
 }

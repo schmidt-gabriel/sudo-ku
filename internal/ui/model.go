@@ -338,7 +338,7 @@ func (m *Model) afterMove() {
 			m.status = m.t.SaveFailed
 		}
 		if err := m.store.DeleteGame(); err != nil {
-			m.status = m.t.SaveFailed
+			m.status = m.t.DeleteFailed
 		}
 		return
 	}

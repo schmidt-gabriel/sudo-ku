@@ -8,9 +8,9 @@ type texts struct {
 	ChooseDifficulty string
 	Difficulties     [4]string // indexed by sudoku.Difficulty
 
-	MenuHelp, GameHelp, WonHelp string
-	ModeLabel, ModeValue        string
-	ModeNotes                   string
+	MenuHelp, DifficultyHelp, GameHelp, WonHelp string
+	ModeLabel, ModeValue                        string
+	ModeNotes                                   string
 
 	// Game screen buttons and the quit dialog.
 	Save, Saved                                    string
@@ -21,11 +21,12 @@ type texts struct {
 	RecentGames string
 	DateFormat  string // a time.Format layout
 
-	Won        string
-	WonDetail  string // difficulty, time
-	LoadFailed string
-	SaveFailed string
-	TooSmall   string // min width, min height, width, height
+	Won          string
+	WonDetail    string // difficulty, time
+	LoadFailed   string
+	SaveFailed   string
+	DeleteFailed string
+	TooSmall     string // min width, min height, width, height
 
 	TutorialSkip  string
 	TutorialDone  string
@@ -63,12 +64,13 @@ var english = texts{
 	ChooseDifficulty: "Choose a difficulty",
 	Difficulties:     [4]string{"Easy", "Medium", "Hard", "Expert"},
 
-	MenuHelp:  "↑↓ move · enter select · esc back · q quit",
-	GameHelp:  "←↑↓→ move · 1-9 place · n notes · u undo · s save · ? help · esc menu · q quit",
-	WonHelp:   "←→ choose · enter select · esc menu · q quit",
-	ModeLabel: " · Mode: ",
-	ModeValue: "Value",
-	ModeNotes: "Notes",
+	MenuHelp:       "↑↓ move · enter select · q quit",
+	DifficultyHelp: "↑↓ move · enter select · esc back · q quit",
+	GameHelp:       "←↑↓→ move · 1-9 place · n notes · u undo · s save · ? help · esc menu · q quit",
+	WonHelp:        "←→ choose · enter select · esc menu · q quit",
+	ModeLabel:      " · Mode: ",
+	ModeValue:      "Value",
+	ModeNotes:      "Notes",
 
 	Save:           "Save",
 	Saved:          "Game saved",
@@ -80,11 +82,12 @@ var english = texts{
 	RecentGames:    "Recent games",
 	DateFormat:     "Jan 02 15:04",
 
-	Won:        "Solved!",
-	WonDetail:  "%s puzzle in %s",
-	LoadFailed: "Couldn't load saved game",
-	SaveFailed: "Couldn't save game",
-	TooSmall:   "Make the terminal at least %d×%d (it is %d×%d)",
+	Won:          "Solved!",
+	WonDetail:    "%s puzzle in %s",
+	LoadFailed:   "Couldn't load saved game",
+	SaveFailed:   "Couldn't save game",
+	DeleteFailed: "Couldn't remove the finished game's save",
+	TooSmall:     "Make the terminal at least %d×%d (it is %d×%d)",
 
 	TutorialSkip: " · esc skips",
 	TutorialDone: "Tutorial complete. Pick New game to play!",
@@ -127,12 +130,13 @@ var portuguese = texts{
 	ChooseDifficulty: "Escolha a dificuldade",
 	Difficulties:     [4]string{"Fácil", "Médio", "Difícil", "Expert"},
 
-	MenuHelp:  "↑↓ mover · enter escolher · esc voltar · q sair",
-	GameHelp:  "←↑↓→ mover · 1-9 colocar · n notas · u desfazer · s salvar · ? ajuda · q sair",
-	WonHelp:   "←→ escolher · enter confirmar · esc menu · q sair",
-	ModeLabel: " · Modo: ",
-	ModeValue: "Valor",
-	ModeNotes: "Notas",
+	MenuHelp:       "↑↓ mover · enter escolher · q sair",
+	DifficultyHelp: "↑↓ mover · enter escolher · esc voltar · q sair",
+	GameHelp:       "←↑↓→ mover · 1-9 colocar · n notas · u desfazer · s salvar · ? ajuda · q sair",
+	WonHelp:        "←→ escolher · enter confirmar · esc menu · q sair",
+	ModeLabel:      " · Modo: ",
+	ModeValue:      "Valor",
+	ModeNotes:      "Notas",
 
 	Save:           "Salvar",
 	Saved:          "Jogo salvo",
@@ -144,11 +148,12 @@ var portuguese = texts{
 	RecentGames:    "Jogos recentes",
 	DateFormat:     "02/01 15:04",
 
-	Won:        "Resolvido!",
-	WonDetail:  "Nível %s resolvido em %s",
-	LoadFailed: "Não foi possível carregar o jogo salvo",
-	SaveFailed: "Não foi possível salvar o jogo",
-	TooSmall:   "Aumente o terminal para pelo menos %d×%d (está %d×%d)",
+	Won:          "Resolvido!",
+	WonDetail:    "Nível %s resolvido em %s",
+	LoadFailed:   "Não foi possível carregar o jogo salvo",
+	SaveFailed:   "Não foi possível salvar o jogo",
+	DeleteFailed: "Não foi possível apagar o jogo concluído",
+	TooSmall:     "Aumente o terminal para pelo menos %d×%d (está %d×%d)",
 
 	TutorialSkip: " · esc pula",
 	TutorialDone: "Tutorial concluído. Escolha Novo jogo para jogar!",

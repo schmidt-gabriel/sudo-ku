@@ -5,10 +5,12 @@ import (
 	"errors"
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/schmidt-gabriel/sudo-ku/internal/game"
 	"github.com/schmidt-gabriel/sudo-ku/internal/store"
@@ -22,24 +24,46 @@ var (
 
 // fakeStore keeps everything in memory.
 type fakeStore struct {
-	saved    *game.Game
-	history  []store.Result
-	settings store.Settings
-	loadErr  error
-	saveErr  error
-	saves    int
+	saved     *game.Game
+	history   []store.Result
+	settings  store.Settings
+	loadErr   error
+	saveErr   error
+	deleteErr error
+	saves     int
 }
 
-func (f *fakeStore) LoadGame() (*game.Game, error) { return f.saved, f.loadErr }
+// LoadGame and SaveGame pass games through JSON like the real store, so
+// tests exercise an actual save and load rather than a shared pointer.
+func (f *fakeStore) LoadGame() (*game.Game, error) {
+	if f.saved == nil {
+		return nil, f.loadErr
+	}
+	g, err := roundTrip(f.saved)
+	if err != nil {
+		return nil, err
+	}
+	return g, f.loadErr
+}
 func (f *fakeStore) SaveGame(g *game.Game) error {
 	f.saves++
 	if f.saveErr != nil {
 		return f.saveErr
 	}
-	f.saved = g
+	saved, err := roundTrip(g)
+	if err != nil {
+		return err
+	}
+	f.saved = saved
 	return nil
 }
-func (f *fakeStore) DeleteGame() error                    { f.saved = nil; return nil }
+func (f *fakeStore) DeleteGame() error {
+	if f.deleteErr != nil {
+		return f.deleteErr
+	}
+	f.saved = nil
+	return nil
+}
 func (f *fakeStore) LoadHistory() ([]store.Result, error) { return f.history, nil }
 func (f *fakeStore) AddResult(r store.Result) error {
 	f.history = append([]store.Result{r}, f.history...)
@@ -188,7 +212,7 @@ func TestDigitPlacesValueAndSaves(t *testing.T) {
 	if m.game.Values[2] != 4 {
 		t.Fatalf("Values[2] = %d, want 4", m.game.Values[2])
 	}
-	if fs.saved != m.game {
+	if fs.saved == nil || fs.saved.Values != m.game.Values {
 		t.Error("game not saved after a move")
 	}
 }
@@ -312,13 +336,33 @@ func roundTrip(g *game.Game) (*game.Game, error) {
 }
 
 func TestCtrlCQuitsFromAnyScreen(t *testing.T) {
-	fs := tutorialSeen()
-	_, cmd := newModel(fs).Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
-	if _, ok := cmd().(tea.QuitMsg); !ok {
-		t.Error("ctrl+c in the menu did not quit")
+	cases := map[string]struct {
+		setup     func(Model) Model
+		wantSaves int
+	}{
+		"menu":        {func(m Model) Model { m.toMenu(); return m }, 0},
+		"difficulty":  {func(m Model) Model { m.mode = modeDifficulty; return m }, 0},
+		"won":         {func(m Model) Model { m.mode = modeWon; return m }, 0},
+		"tutorial":    {func(m Model) Model { m.startTutorial(); return m }, 0},
+		"playing":     {func(m Model) Model { return m }, 1},
+		"help":        {func(m Model) Model { m.showHelp = true; return m }, 1},
+		"quit dialog": {func(m Model) Model { m.confirmQuit = true; return m }, 1},
 	}
-	if fs.saves != 0 {
-		t.Error("ctrl+c in the menu wrote a save")
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			fs := tutorialSeen()
+			m := c.setup(playing(fs))
+			_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+			if cmd == nil {
+				t.Fatal("ctrl+c returned no command")
+			}
+			if _, ok := cmd().(tea.QuitMsg); !ok {
+				t.Error("ctrl+c did not quit")
+			}
+			if fs.saves != c.wantSaves {
+				t.Errorf("saves = %d, want %d", fs.saves, c.wantSaves)
+			}
+		})
 	}
 }
 
@@ -370,5 +414,35 @@ func TestWonScreenArrows(t *testing.T) {
 		if m := press(won(), k, k); m.menuIndex != 1 {
 			t.Errorf("%s twice: selected %d, want 1", k, m.menuIndex)
 		}
+	}
+}
+
+func TestMenuHelpMatchesEsc(t *testing.T) {
+	for code, tx := range languages {
+		m := newModel(tutorialSeen())
+		m.t = tx
+		menu := ansi.Strip(m.View().Content)
+		if !strings.Contains(menu, tx.MenuHelp) || strings.Contains(menu, tx.DifficultyHelp) {
+			t.Errorf("%s: main menu should show MenuHelp only:\n%s", code, menu)
+		}
+		m = press(m, "enter") // New game opens the difficulty list
+		if list := ansi.Strip(m.View().Content); !strings.Contains(list, tx.DifficultyHelp) {
+			t.Errorf("%s: difficulty list should show DifficultyHelp:\n%s", code, list)
+		}
+	}
+	if strings.Contains(english.MenuHelp, "esc") {
+		t.Errorf("main menu help mentions esc, which quits there: %q", english.MenuHelp)
+	}
+}
+
+func TestWinWithUndeletableSave(t *testing.T) {
+	fs := tutorialSeen()
+	fs.deleteErr = errors.New("read-only")
+	m := playing(fs)
+	almost := testSolution
+	almost[2] = 0
+	m.game = game.FromPuzzle(almost, testSolution, sudoku.Easy)
+	if m = press(m, "4"); m.mode != modeWon || m.status != english.DeleteFailed {
+		t.Errorf("mode %v status %q, want the win screen with %q", m.mode, m.status, english.DeleteFailed)
 	}
 }

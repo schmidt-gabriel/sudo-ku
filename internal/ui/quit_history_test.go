@@ -111,7 +111,7 @@ func TestQuitAsksToSaveOrDiscard(t *testing.T) {
 	}
 	_, cmd = m.Update(key("s"))
 	quitCmd(t, cmd)
-	if fs.saved != m.game {
+	if fs.saved == nil || fs.saved.Values != m.game.Values {
 		t.Error("save and quit did not save")
 	}
 
@@ -187,7 +187,7 @@ func TestSaveButtonAndKey(t *testing.T) {
 		t.Errorf("game screen has no Save button:\n%s", got)
 	}
 	m, _ = m.handleClick("btn-save")
-	if fs.saves != 1 || fs.saved != m.game || m.status != english.Saved {
+	if fs.saves != 1 || fs.saved == nil || fs.saved.Values != m.game.Values || m.status != english.Saved {
 		t.Fatalf("Save button: saves %d, status %q", fs.saves, m.status)
 	}
 	m = press(m, "s")

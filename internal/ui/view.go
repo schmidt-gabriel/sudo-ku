@@ -49,7 +49,7 @@ func (m Model) render() string {
 		for _, d := range sudoku.Difficulties {
 			opts = append(opts, m.t.Difficulties[d])
 		}
-		return m.renderList(st, m.t.ChooseDifficulty, opts, "diff", m.menuIndex, nil, m.t.MenuHelp)
+		return m.renderList(st, m.t.ChooseDifficulty, opts, "diff", m.menuIndex, nil, m.t.DifficultyHelp)
 	case modePlaying, modeTutorial:
 		return m.renderGame(st)
 	case modeWon:
