@@ -89,6 +89,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick()
 	case tea.KeyPressMsg:
 		return m.handleKey(msg.String())
+	case tea.MouseClickMsg:
+		if msg.Button == tea.MouseLeft {
+			if id := m.hit(msg); id != "" {
+				return m.handleClick(id)
+			}
+		}
 	}
 	return m, nil
 }
