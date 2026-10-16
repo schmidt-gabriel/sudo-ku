@@ -19,18 +19,19 @@ func TestCellAt(t *testing.T) {
 		ok   bool
 	}{
 		{1, 1, 0, true},   // top-left cell
-		{5, 3, 0, true},   // bottom-right character of cell 0
-		{7, 1, 1, true},   // after the thin separator
-		{19, 1, 3, true},  // first cell of the second box
-		{1, 4, 9, true},   // second row
-		{1, 11, 27, true}, // first row of the second band
-		{53, 29, 80, true},
+		{7, 3, 0, true},   // bottom-right character of cell 0
+		{9, 1, 1, true},   // after the thin separator
+		{25, 1, 3, true},  // first cell of the second box
+		{1, 5, 9, true},   // second row, below a thin line
+		{1, 13, 27, true}, // first row of the second band
+		{71, 35, 80, true},
+		{1, 4, 0, false},  // thin line between rows
 		{0, 1, 0, false},  // left border
-		{6, 1, 0, false},  // thin separator
-		{18, 1, 0, false}, // thick border between boxes
-		{1, 10, 0, false}, // thick border between bands
-		{54, 1, 0, false}, // right border
-		{1, 30, 0, false}, // bottom border
+		{8, 1, 0, false},  // thin separator
+		{24, 1, 0, false}, // thick border between boxes
+		{1, 12, 0, false}, // thick border between bands
+		{72, 1, 0, false}, // right border
+		{1, 36, 0, false}, // bottom border
 		{-1, -1, 0, false},
 	}
 	for _, c := range cases {
@@ -70,7 +71,7 @@ func TestFormatDuration(t *testing.T) {
 
 func TestRenderEveryScreen(t *testing.T) {
 	m := playing(tutorialSeen())
-	m.width, m.height = 80, 40
+	m.width, m.height = 100, 50
 	screens := map[string]func(Model) Model{
 		"New game":    func(m Model) Model { m.toMenu(); return m },
 		"Expert":      func(m Model) Model { m.mode = modeDifficulty; return m },
@@ -96,7 +97,7 @@ func TestResizeBackRestoresGame(t *testing.T) {
 	if !strings.Contains(m.View().Content, "Make the terminal") {
 		t.Fatal("small window did not show the size message")
 	}
-	next, _ = m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	next, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
 	m = next.(Model)
 	if !strings.Contains(m.View().Content, "Mode: ") || m.game.Values[2] != 4 {
 		t.Error("growing the window did not bring the game back intact")
@@ -158,14 +159,14 @@ func TestNotesRenderInCell(t *testing.T) {
 	m.game = game.FromPuzzle(testPuzzle, testSolution, sudoku.Easy)
 	m.game.ToggleNote(2, 1)
 	m.game.ToggleNote(2, 9)
-	if got := m.cellLine(2, 0); got != "1    " {
-		t.Errorf("notes line 0 = %q, want %q", got, "1    ")
+	if got := m.cellLine(2, 0); got != " 1     " {
+		t.Errorf("notes line 0 = %q, want %q", got, " 1     ")
 	}
-	if got := m.cellLine(2, 2); got != "    9" {
-		t.Errorf("notes line 2 = %q, want %q", got, "    9")
+	if got := m.cellLine(2, 2); got != "     9 " {
+		t.Errorf("notes line 2 = %q, want %q", got, "     9 ")
 	}
-	if got := m.cellLine(0, 1); got != "  5  " {
-		t.Errorf("value line = %q, want %q", got, "  5  ")
+	if got := m.cellLine(0, 1); got != "   5   " {
+		t.Errorf("value line = %q, want %q", got, "   5   ")
 	}
 }
 
@@ -195,5 +196,77 @@ func TestClickAnywhereClosesHelp(t *testing.T) {
 	next, _ := m.Update(tea.MouseClickMsg{X: 0, Y: 0, Button: tea.MouseLeft})
 	if next.(Model).showHelp {
 		t.Error("a click outside any zone did not close help")
+	}
+}
+
+func TestBoardGeometry(t *testing.T) {
+	if cellW != 7 || cellH != 3 || boardW != 73 || boardH != 37 {
+		t.Errorf("cells %dx%d board %dx%d, want 7x3 and 73x37", cellW, cellH, boardW, boardH)
+	}
+	if minWidth < boardW {
+		t.Errorf("minWidth %d is narrower than the board (%d)", minWidth, boardW)
+	}
+}
+
+func TestHighlightHierarchy(t *testing.T) {
+	st := newStyles(true)
+	m := playing(tutorialSeen())
+	m.cursor = 0 // a given 5
+
+	if bg := m.cellBg(st, 0); bg != st.selectedBg {
+		t.Errorf("selected cell background = %v, want selectedBg", bg)
+	}
+	for _, peer := range []int{1, 9, 10} { // row, column, box
+		if bg := m.cellBg(st, peer); bg != st.peerBg {
+			t.Errorf("peer %d background = %v, want peerBg", peer, bg)
+		}
+	}
+	// Cell 14 holds another 5 but is not a peer of cell 0: text only, no background.
+	if bg := m.cellBg(st, 14); bg != nil {
+		t.Errorf("same-digit cell has background %v, want none", bg)
+	}
+	if s := m.cellStyle(st, 14, false); s.GetForeground() != st.same || !s.GetBold() {
+		t.Error("same-digit cell should be bold in the same-digit color")
+	}
+	if bg := m.cellBg(st, 40); bg != nil {
+		t.Errorf("unrelated cell has background %v, want none", bg)
+	}
+}
+
+func TestSeparatorsJoinHighlights(t *testing.T) {
+	st := newStyles(true)
+	m := playing(tutorialSeen())
+	m.cursor = 0
+	if bg := m.separatorBg(st, 0, 1); bg != st.peerBg {
+		t.Errorf("separator inside the selected row = %v, want peerBg", bg)
+	}
+	if bg := m.separatorBg(st, 9, 10); bg != st.peerBg {
+		t.Errorf("separator inside the selected box = %v, want peerBg", bg)
+	}
+	if bg := m.separatorBg(st, 0, 9); bg != st.peerBg {
+		t.Errorf("line between two cells of the selected column = %v, want peerBg", bg)
+	}
+	if bg := m.crossBg(st, 0, 1, 9, 10); bg != st.peerBg {
+		t.Errorf("crossing inside the selected box = %v, want peerBg", bg)
+	}
+	if bg := m.crossBg(st, 36, 37, 45, 46); bg != nil {
+		t.Errorf("crossing next to plain cells = %v, want none", bg)
+	}
+	if bg := m.separatorBg(st, 36, 37); bg != nil {
+		t.Errorf("separator between a highlighted and a plain cell = %v, want none", bg)
+	}
+	if bg := m.separatorBg(st, 12, 13); bg != nil {
+		t.Errorf("separator outside every highlight = %v, want none", bg)
+	}
+}
+
+func TestNotesReadableOnSelectedCell(t *testing.T) {
+	st := newStyles(true)
+	m := playing(tutorialSeen()) // cursor on empty cell 2
+	if s := m.cellStyle(st, 2, false); s.GetForeground() != st.text {
+		t.Error("notes on the selected cell should use the main text color")
+	}
+	if s := m.cellStyle(st, 3, false); s.GetForeground() != st.muted {
+		t.Error("notes elsewhere should stay muted")
 	}
 }

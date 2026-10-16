@@ -14,7 +14,7 @@ import (
 // The game screen is a header, the board, the number pad, a shortcut line
 // and a status line.
 const (
-	minWidth  = 60
+	minWidth  = boardW
 	minHeight = boardH + 5
 )
 

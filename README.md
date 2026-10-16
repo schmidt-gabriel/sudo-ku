@@ -30,7 +30,7 @@ sudo-ku
 The first run opens a short interactive tutorial. You can replay it from the menu.
 The game starts in English; pick **Language** in the menu to switch to
 Brazilian Portuguese (and back). The choice is remembered.
-The terminal needs to be at least 60 columns by 36 rows.
+The terminal needs to be at least 73 columns by 42 rows.
 
 | Action | Keyboard | Mouse |
 |---|---|---|

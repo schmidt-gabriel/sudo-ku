@@ -129,8 +129,8 @@ Lists work with arrows + enter and with clicks.
 
 ### Board
 
-- Cells are 5x3 characters so a 3x3 grid of notes fits. Thin `│` between cells, thick borders around boxes. The board is 55x31.
-- Minimum terminal: 60x36. Below that, only a message asking for a bigger window is shown.
+- Cells are 7x3 characters (` 1 2 3 ` for notes), close to square in most fonts. Thin `│` and `─` lines between all cells, thick borders around boxes, matching junctions (`┼`, `┿`, `╂`). The board is 73x37.
+- Minimum terminal: 73x42. Below that, only a message asking for a bigger window is shown.
 - Number pad: `[1]`..`[9]`, `[Erase]`, `[Notes]`, `[Undo]`.
 
 ### Controls
@@ -152,9 +152,10 @@ Colors come from `lipgloss.LightDark`, driven by `tea.BackgroundColorMsg`
 (dark is assumed until the terminal answers):
 
 - Givens: bold neutral. Player digits: blue. Conflicts: bold red.
-- Selected cell: strong background. Its row, column and box: soft background.
-- Cells with the same digit as the selection: highlighted.
-- Notes: grey.
+- Selected cell: the only strong background. Its row, column and box: soft background, with the thin lines between highlighted cells painted too so the highlight reads as one block.
+- Cells with the same digit as the selection: bold amber text, no background.
+- Notes: grey (main text color on the selected cell).
+- Backgrounds and amber are xterm-256 palette colors so 256-color terminals show them unchanged.
 
 ### Timer
 
