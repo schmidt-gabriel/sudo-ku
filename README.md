@@ -41,8 +41,8 @@ The terminal needs to be at least 91 columns by 32 rows.
 | Undo / redo | `u` / `ctrl+r` |
 | Save now | `s`, or click `[Save]` |
 | Help | `?` |
-| Menu | `esc` (saves) |
-| Quit | `q`, or click `[Quit]`: save and quit, or discard and quit |
+| Back to the menu | `esc`, or click `[Menu]` (saves the game) |
+| Quit | `q`: save and quit, or discard and quit |
 
 Placing a digit removes it from the notes in the same row, column and box.
 Digits on a blue background are yours and can be changed; the others are

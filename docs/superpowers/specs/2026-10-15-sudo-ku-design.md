@@ -123,8 +123,8 @@ clicks), `styles.go`, `text.go`, `tutorial.go`.
 
 - **Menu:** Continue (only with a save), New game, Tutorial, Language, Quit. Below it, "Recent games": the last 5 finished games (date and time in the language's format, difficulty, elapsed time).
 - **Difficulty:** Easy, Medium, Hard, Expert.
-- **Playing:** header line (difficulty, timer, value/notes mode, and clickable `[Save]` `[Quit]` on the right), board, shortcut line, status line.
-- **Quit dialog** (`q` or `[Quit]` during a game): Save and quit (`s`), Discard and quit (`d`, deletes the save), Cancel (`esc`). Arrows + enter and clicks work too; the timer pauses while it is open. In the tutorial and the menus `q` quits directly; `ctrl+c` always saves and quits.
+- **Playing:** header line (difficulty, timer, value/notes mode, and clickable `[Save]` `[Menu]` on the right; `[Menu]` saves and returns to the menu like `esc`), board, shortcut line, status line.
+- **Quit dialog** (`q` during a game): Save and quit (`s`), Discard and quit (`d`, deletes the save), Cancel (`esc`). Arrows + enter and clicks work too; the timer pauses while it is open. In the tutorial and the menus `q` quits directly; `ctrl+c` always saves and quits.
 - **Won:** difficulty and time; New game, Menu.
 
 Lists work with arrows + enter and with clicks.
@@ -145,8 +145,9 @@ Lists work with arrows + enter and with clicks.
 | Toggle notes mode | `n` | |
 | Undo / redo | `u`, `ctrl+z` / `ctrl+r` | |
 | Save now (play also autosaves after every move) | `s` | `[Save]` |
-| Help / menu | `?` / `esc` | |
-| Quit (asks save or discard) | `q` | `[Quit]` |
+| Help | `?` | |
+| Back to the menu (saves) | `esc` | `[Menu]` |
+| Quit (asks save or discard) | `q` | |
 
 `esc` saves the game before returning to the menu.
 

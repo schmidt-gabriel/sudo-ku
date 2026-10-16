@@ -130,7 +130,7 @@ func (m Model) header(st styles) string {
 		st.help.Render(" · "+formatDuration(m.game.Elapsed)+m.t.ModeLabel) +
 		st.item.Render(modeName)
 	buttons := zone.Mark("btn-save", st.item.Render("["+m.t.Save+"]")) + " " +
-		zone.Mark("btn-quit", st.item.Render("["+m.t.Quit+"]"))
+		zone.Mark("btn-menu", st.item.Render("["+m.t.Menu+"]"))
 	gap := max(boardW-lipgloss.Width(left)-lipgloss.Width(buttons), 1)
 	return left + strings.Repeat(" ", gap) + buttons
 }
