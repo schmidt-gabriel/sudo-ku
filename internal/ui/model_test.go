@@ -30,13 +30,28 @@ type fakeStore struct {
 	saves    int
 }
 
-func (f *fakeStore) LoadGame() (*game.Game, error) { return f.saved, f.loadErr }
+// LoadGame and SaveGame pass games through JSON like the real store, so
+// tests exercise an actual save and load rather than a shared pointer.
+func (f *fakeStore) LoadGame() (*game.Game, error) {
+	if f.saved == nil {
+		return nil, f.loadErr
+	}
+	g, err := roundTrip(f.saved)
+	if err != nil {
+		return nil, err
+	}
+	return g, f.loadErr
+}
 func (f *fakeStore) SaveGame(g *game.Game) error {
 	f.saves++
 	if f.saveErr != nil {
 		return f.saveErr
 	}
-	f.saved = g
+	saved, err := roundTrip(g)
+	if err != nil {
+		return err
+	}
+	f.saved = saved
 	return nil
 }
 func (f *fakeStore) DeleteGame() error                    { f.saved = nil; return nil }
@@ -188,7 +203,7 @@ func TestDigitPlacesValueAndSaves(t *testing.T) {
 	if m.game.Values[2] != 4 {
 		t.Fatalf("Values[2] = %d, want 4", m.game.Values[2])
 	}
-	if fs.saved != m.game {
+	if fs.saved == nil || fs.saved.Values != m.game.Values {
 		t.Error("game not saved after a move")
 	}
 }
@@ -312,13 +327,33 @@ func roundTrip(g *game.Game) (*game.Game, error) {
 }
 
 func TestCtrlCQuitsFromAnyScreen(t *testing.T) {
-	fs := tutorialSeen()
-	_, cmd := newModel(fs).Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
-	if _, ok := cmd().(tea.QuitMsg); !ok {
-		t.Error("ctrl+c in the menu did not quit")
+	cases := map[string]struct {
+		setup     func(Model) Model
+		wantSaves int
+	}{
+		"menu":        {func(m Model) Model { m.toMenu(); return m }, 0},
+		"difficulty":  {func(m Model) Model { m.mode = modeDifficulty; return m }, 0},
+		"won":         {func(m Model) Model { m.mode = modeWon; return m }, 0},
+		"tutorial":    {func(m Model) Model { m.startTutorial(); return m }, 0},
+		"playing":     {func(m Model) Model { return m }, 1},
+		"help":        {func(m Model) Model { m.showHelp = true; return m }, 1},
+		"quit dialog": {func(m Model) Model { m.confirmQuit = true; return m }, 1},
 	}
-	if fs.saves != 0 {
-		t.Error("ctrl+c in the menu wrote a save")
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			fs := tutorialSeen()
+			m := c.setup(playing(fs))
+			_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+			if cmd == nil {
+				t.Fatal("ctrl+c returned no command")
+			}
+			if _, ok := cmd().(tea.QuitMsg); !ok {
+				t.Error("ctrl+c did not quit")
+			}
+			if fs.saves != c.wantSaves {
+				t.Errorf("saves = %d, want %d", fs.saves, c.wantSaves)
+			}
+		})
 	}
 }
 
