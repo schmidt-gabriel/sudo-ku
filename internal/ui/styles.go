@@ -8,8 +8,8 @@ import (
 
 // styles holds every color and style, picked for a light or dark terminal.
 type styles struct {
-	text, muted, accent, conflict, same color.Color
-	peerBg, selectedBg, targetBg        color.Color
+	text, muted, accent, conflict, same, onSelected color.Color
+	peerBg, selectedBg, targetBg                    color.Color
 
 	// frame draws the box borders; border the thin lines between cells.
 	frame, border, title, help, status, item, itemOn lipgloss.Style
@@ -26,6 +26,7 @@ func newStyles(dark bool) styles {
 		// Backgrounds and the same-digit color are xterm-256 palette entries,
 		// so they look the same in 256-color and true-color terminals.
 		same:       ld(c("136"), c("179")),
+		onSelected: ld(c("16"), c("231")), // black or white on the selection
 		peerBg:     ld(c("254"), c("236")),
 		selectedBg: ld(c("153"), c("25")),
 		targetBg:   ld(c("229"), c("58")),

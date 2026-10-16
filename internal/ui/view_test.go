@@ -246,14 +246,31 @@ func TestGridLinesAreNeverPainted(t *testing.T) {
 	}
 }
 
-func TestNotesReadableOnSelectedCell(t *testing.T) {
-	st := newStyles(true)
-	m := playing(tutorialSeen()) // cursor on empty cell 2
-	if s := m.cellStyle(st, 2, false); s.GetForeground() != st.text {
-		t.Error("notes on the selected cell should use the main text color")
-	}
-	if s := m.cellStyle(st, 3, false); s.GetForeground() != st.muted {
-		t.Error("notes elsewhere should stay muted")
+func TestSelectedCellTextIsReadable(t *testing.T) {
+	for _, dark := range []bool{true, false} {
+		st := newStyles(dark)
+		m := playing(tutorialSeen()) // cursor on empty cell 2
+		check := func(what string) {
+			t.Helper()
+			if got := m.cellStyle(st, m.cursor, false).GetForeground(); got != st.onSelected {
+				t.Errorf("dark=%v: %s on the selected cell uses %v, want onSelected", dark, what, got)
+			}
+		}
+		m.game.ToggleNote(2, 1)
+		check("notes")
+		m.game.Set(2, 4)
+		check("a player's digit")
+		m.cursor = 0
+		check("a given")
+		if st.onSelected == st.accent {
+			t.Errorf("dark=%v: selected text must not be the player-digit blue", dark)
+		}
+		if got := m.cellStyle(st, 3, false).GetForeground(); got != st.muted {
+			t.Errorf("dark=%v: notes elsewhere should stay muted", dark)
+		}
+		if got := m.cellStyle(st, 0, true).GetForeground(); got != st.conflict {
+			t.Errorf("dark=%v: a conflict on the selected cell should stay red", dark)
+		}
 	}
 }
 

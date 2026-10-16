@@ -152,22 +152,23 @@ func paint(s lipgloss.Style, bg color.Color) lipgloss.Style {
 	return s.Background(bg)
 }
 
-// cellStyle colors a cell: conflicts red, digits equal to the selected one
-// in bold amber, givens bold, the player's digits blue, notes grey.
+// cellStyle colors a cell: conflicts red, the selected cell black or white,
+// digits equal to the selected one in bold amber, givens bold, the player's
+// digits blue, notes grey.
 func (m Model) cellStyle(st styles, i int, conflict bool) lipgloss.Style {
 	g, sel := m.game, m.cursor
 	s := paint(lipgloss.NewStyle(), m.cellBg(st, i))
 	switch {
 	case conflict:
 		return s.Foreground(st.conflict).Bold(true)
-	case i != sel && g.Values[i] != 0 && g.Values[i] == g.Values[sel]:
+	case i == sel:
+		return s.Foreground(st.onSelected).Bold(true) // readable on the strong background
+	case g.Values[i] != 0 && g.Values[i] == g.Values[sel]:
 		return s.Foreground(st.same).Bold(true)
 	case g.IsGiven(i):
 		return s.Foreground(st.text).Bold(true)
 	case g.Values[i] != 0:
 		return s.Foreground(st.accent)
-	case i == sel:
-		return s.Foreground(st.text) // notes stay readable on the strong background
 	}
 	return s.Foreground(st.muted)
 }
